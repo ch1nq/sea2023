@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Node Editor</title>
+    <style>
+        .node {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #eee;
+            border: 1px solid #ccc;
+            text-align: center;
+            cursor: move;
+        }
+
+        .edge {
+            position: absolute;
+            border: 2px solid black;
+            pointer-events: none;
+        }
+
+        #canvas {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .no-select {
+            -webkit-user-select: none;
+            /* Safari 3.1+ */
+            -moz-user-select: none;
+            /* Firefox 2+ */
+            -ms-user-select: none;
+            /* IE 10+ */
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar to create nodes and edges -->
+    <div id="navbar">
+        <button class="btn" id="btn-create">Create Node</button>
+        <button class="btn" id="btn-connect">Connect Nodes</button>
+    </div>
+    <svg class="no-select" id="canvas">
+        <g id="edges"></g>
+        <g id="nodes"></g>
+    </svg>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+
+</html>

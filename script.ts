@@ -1,12 +1,15 @@
 let selected_node: SVGRectElement | null = null;
 let offset_x = 0;
 let offset_y = 0;
+let global_offset_x = 0;
+let global_offset_y = 0;
 const nodeSize = 50;
 
 enum State {
     Drag = "drag",
     Create = "create",
     Connect = "connect",
+    Delete = "delete",
 }
 
 let state: State = State.Drag;
@@ -15,11 +18,9 @@ function changeState(newState: State) {
     state = newState;
     selected_node = null;
     console.log(state);
-    console.log(selected_node);
 }
 
 function dragStart(event: MouseEvent) {
-    console.log("dragStart");
     if (event.target instanceof SVGRectElement) {
         selected_node = event.target;
     } else if (event.target instanceof SVGTextElement) {
@@ -38,12 +39,10 @@ function drag(event: MouseEvent) {
         selected_node.setAttribute("x", x.toString());
         selected_node.setAttribute("y", y.toString());
         const node_id = selected_node.getAttribute("data-id")!;
-        const node_center_x = x + nodeSize / 2;
-        const node_center_y = y + nodeSize / 2;
-        updateEdges(node_id, node_center_x, node_center_y);
+        updateEdges(node_id, x, y);
         const label = selected_node.nextElementSibling as SVGTextElement;
-        label.setAttribute("x", node_center_x.toString());
-        label.setAttribute("y", node_center_y.toString());
+        label.setAttribute("x", x.toString());
+        label.setAttribute("y", y.toString());
     }
 }
 
@@ -62,8 +61,6 @@ function dragEnd(_event: MouseEvent) {
 
 function connectClick(event: MouseEvent) {
     var node: SVGRectElement;
-    console.log("target", event.target);
-    console.log("selected_node", selected_node);
     if (event.target instanceof SVGRectElement) {
         node = event.target;
     } else if (event.target instanceof SVGTextElement) {
@@ -94,9 +91,9 @@ function connectClick(event: MouseEvent) {
 
 }
 
-function createNode(event: MouseEvent) {
-    var x = event.clientX - nodeSize / 2;
-    var y = event.clientY - nodeSize / 2;
+function createClick(event: MouseEvent) {
+    var x = event.clientX;
+    var y = event.clientY;
     var xhr = new XMLHttpRequest();
     xhr.open("POST", "/create");
     xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -107,6 +104,30 @@ function createNode(event: MouseEvent) {
         }
     };
     xhr.send(`x=${x}&y=${y}`);
+}
+
+function deleteClick(event: MouseEvent) {
+    var node: SVGRectElement;
+    if (event.target instanceof SVGRectElement) {
+        node = event.target;
+    } else if (event.target instanceof SVGTextElement) {
+        node = event.target.previousElementSibling as SVGRectElement;
+    } else {
+        return;
+    }
+    var node_id = node.getAttribute("data-id");
+    if (!node_id) {
+        throw new Error("node_id not found");
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/delete");
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            removeNodeFromCanvas(node_id!);
+        }
+    };
+    xhr.send(`node_id=${node_id}`);
 }
 
 function addEdgeToCanvas(edge: { id: string; start_node_id: string; end_node_id: string; x1: string; y1: string; x2: string; y2: string; }) {
@@ -134,10 +155,12 @@ function addNodeToCanvas(node: { id: string; x: number; y: number; }) {
     }
     var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     rect.setAttribute("class", "node");
-    rect.setAttribute("x", (node.x - nodeSize / 2).toString());
-    rect.setAttribute("y", (node.y - nodeSize / 2).toString());
+    rect.setAttribute("x", (node.x).toString());
+    rect.setAttribute("y", (node.y).toString());
     rect.setAttribute("width", nodeSize.toString());
     rect.setAttribute("height", nodeSize.toString());
+    rect.setAttribute("transform", `translate(${-nodeSize / 2}, ${-nodeSize / 2})`);
+    rect.setAttribute("rx", "2000");
     rect.setAttribute("fill", "#eee");
     rect.setAttribute("stroke", "#ccc");
     rect.setAttribute("stroke-width", "1");
@@ -146,13 +169,36 @@ function addNodeToCanvas(node: { id: string; x: number; y: number; }) {
     var text = document.createElementNS("http://www.w3.org/2000/svg", "text");
     text.setAttribute("x", (node.x).toString());
     text.setAttribute("y", (node.y).toString());
+    text.setAttribute("data-id", node.id);
     text.setAttribute("font-size", "20");
     text.setAttribute("font-family", "Arial");
     text.setAttribute("text-anchor", "middle");
+    text.setAttribute("dominant-baseline", "middle");
     text.textContent = node.id;
     nodes.appendChild(text);
 }
 
+function removeNodeFromCanvas(node_id: string) {
+    var nodes = document.getElementById("nodes");
+    if (!nodes) {
+        throw new Error("nodes not found");
+    }
+    var node_elements = document.querySelectorAll(`[data-id="${node_id}"]`);
+    if (!node_elements) {
+        throw new Error("node not found");
+    }
+    node_elements.forEach(element => {
+        nodes?.removeChild(element);
+    });
+    var edges = document.getElementsByClassName("edge");
+    for (let i = 0; i < edges.length; i++) {
+        const start_node_id = edges[i].getAttribute("data-start-node-id");
+        const end_node_id = edges[i].getAttribute("data-end-node-id");
+        if (start_node_id === node_id || end_node_id === node_id) {
+            edges[i].remove();
+        }
+    }
+}
 
 function updateEdges(node_id: string, x: number, y: number) {
     const edges = document.getElementsByClassName("edge");
@@ -210,11 +256,14 @@ canvas.addEventListener("mousedown", (event: MouseEvent) => {
             dragStart(event);
             break;
         case State.Create:
-            createNode(event);
+            createClick(event);
             changeState(State.Drag);
             break;
         case State.Connect:
             connectClick(event);
+            break;
+        case State.Delete:
+            deleteClick(event);
             break;
     }
 });
@@ -227,6 +276,8 @@ canvas.addEventListener("mousemove", (event: MouseEvent) => {
             break;
         case State.Connect:
             break;
+        case State.Delete:
+            break;
     }
 });
 canvas.addEventListener("mouseup", (event: MouseEvent) => {
@@ -238,12 +289,15 @@ canvas.addEventListener("mouseup", (event: MouseEvent) => {
             break;
         case State.Connect:
             break;
+        case State.Delete:
+            break;
     }
 }
 );
 
 document.getElementById('btn-create')?.addEventListener('click', () => { changeState(State.Create) });
 document.getElementById('btn-connect')?.addEventListener('click', () => { changeState(State.Connect); });
+document.getElementById('btn-delete')?.addEventListener('click', () => { changeState(State.Delete); });
 
 
 

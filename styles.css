@@ -1,0 +1,41 @@
+html,
+body {
+    margin: 10px;
+    padding: 0;
+    text-align: center;
+    background-color: #2c2a29;
+}
+
+p {
+    color: #fae5c8;
+}
+
+h2 {
+    color: #f1eeed;
+    position: relative;
+    min-height: 0px;
+    display: inline-block;
+}
+
+body {
+    /* width: 1000px; */
+    height: 1000px;
+}
+
+table {
+    border-spacing: 5px;
+}
+
+tr {
+    height: 100px;
+}
+
+td {
+    background-color: #3f3832;
+    width: 100px;
+    height: 100px;
+    border-radius: 10px;
+    border: solid;
+    border-width: 3px;
+    border-color: transparent;
+}

@@ -4,9 +4,11 @@ import random
 from dataclasses import dataclass
 
 import flask
+import ngrok
 
 MAX_NODES = 10000
 
+tunnel = ngrok.werkzeug_develop()
 app = Flask(__name__)
 
 

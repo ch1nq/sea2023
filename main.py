@@ -1,20 +1,16 @@
 import enum
+import logging
 import random
 from dataclasses import dataclass
 
 import flask
+import ngrok
 from flask import Flask, jsonify, render_template, request
-
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import logging, ngrok
-
-
-app = Flask(__name__)
 
 
 logging.basicConfig(level=logging.INFO)
-ngrok.listen(app)
-
+tunnel = ngrok.werkzeug_develop()
+app = Flask(__name__)
 
 MAX_NODES = 10000
 

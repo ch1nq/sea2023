@@ -1,15 +1,18 @@
 import enum
-from flask import Flask, jsonify, render_template, request
+import logging
 import random
 from dataclasses import dataclass
 
 import flask
 import ngrok
+from flask import Flask, jsonify, render_template, request
 
-MAX_NODES = 10000
 
+logging.basicConfig(level=logging.INFO)
 tunnel = ngrok.werkzeug_develop()
 app = Flask(__name__)
+
+MAX_NODES = 10000
 
 
 @dataclass(order=True, frozen=True)

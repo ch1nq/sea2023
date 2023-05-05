@@ -28,8 +28,14 @@ type Position = {
     y: number;
 };
 
+enum NodeType {
+    Place = "place",
+    Transition = "transition",
+}
+
 type GraphNode = {
     id: GraphNodeId;
+    node_type: NodeType;
     position: Position;
 };
 
@@ -43,6 +49,7 @@ type Edge = {
 
 let state: State = State.Drag;
 let dragState: DragState = DragState.None;
+let new_node_type: NodeType = NodeType.Place;
 
 
 var canvas = document.getElementById("canvas");
@@ -52,15 +59,19 @@ if (!canvas || !(canvas instanceof SVGSVGElement)) {
 
 
 function changeState(newState: State) {
+    const stateText = document.getElementById("state");
+    if (!stateText) {
+        throw new Error("stateText not found");
+    }
+    stateText.textContent = newState;
     state = newState;
     selected_node = null;
-    console.log(state);
 }
 
 function transformCoords(x: number, y: number, screenToGraph: boolean): SVGPoint {
-    const svg = document.getElementById("canvas") as SVGSVGElement | null;
-    const graph = document.getElementById("graph") as SVGGElement | null;
-    if (!graph || !svg) {
+    const svg = document.getElementById("canvas");
+    const graph = document.getElementById("graph");
+    if (!(graph instanceof SVGGElement) || !(svg instanceof SVGSVGElement)) {
         throw new Error("Could not find SVGSVGElement with ID 'graph'");
     }
 
@@ -134,8 +145,7 @@ function drag(event: MouseEvent) {
         const point = screenToGraphCoords(event.clientX - offset_x, event.clientY - offset_y);
         selected_node.setAttribute("x", point.x.toString());
         selected_node.setAttribute("y", point.y.toString());
-        const node_id = selected_node.getAttribute("data-id")!;
-        updateEdges(node_id, point.x, point.y);
+        updateEdges();
         const label = selected_node.nextElementSibling as SVGTextElement;
         label.setAttribute("x", point.x.toString());
         label.setAttribute("y", point.y.toString());
@@ -202,9 +212,8 @@ function connectClick(event: MouseEvent) {
 }
 
 function createClick(event: MouseEvent) {
-    var x = event.x;
-    var y = event.y;
-    console.log(event);
+    var point = screenToGraphCoords(event.clientX, event.clientY);
+    var node_type = new_node_type;
 
     var xhr = new XMLHttpRequest();
     xhr.open("POST", "/create");
@@ -215,7 +224,7 @@ function createClick(event: MouseEvent) {
             addNodeToCanvas(node);
         }
     };
-    xhr.send(`x=${x}&y=${y}`);
+    xhr.send(`x=${point.x}&y=${point.y}&node_type=${node_type}`);
 }
 
 function deleteClick(event: MouseEvent) {
@@ -243,18 +252,49 @@ function deleteClick(event: MouseEvent) {
 }
 
 function addEdgeToCanvas(edge: Edge) {
-    var edges = document.getElementById("edges");
+    const edges = document.getElementById("edges");
     if (!edges) throw new Error("edges not found");
-    var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+
+    const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    marker.setAttribute("id", "arrow");
+    marker.setAttribute("markerWidth", "10");
+    marker.setAttribute("markerHeight", "10");
+    marker.setAttribute("refX", "8");
+    marker.setAttribute("refY", "5");
+    marker.setAttribute("orient", "auto-start-reverse");
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M 0 0 L 10 5 L 0 10 z");
+    path.setAttribute("fill", "black");
+
+    marker.appendChild(path);
+    edges.appendChild(marker);
+
+    let { start_x, start_y, end_x, end_y } = computeEdgeOffsetPosition(edge);
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("class", "edge");
-    line.setAttribute("x1", edge.start_position.x.toString());
-    line.setAttribute("y1", edge.start_position.y.toString());
-    line.setAttribute("x2", edge.end_position.x.toString());
-    line.setAttribute("y2", edge.end_position.y.toString());
+    line.setAttribute("x1", start_x.toString());
+    line.setAttribute("y1", start_y.toString());
+    line.setAttribute("x2", end_x.toString());
+    line.setAttribute("y2", end_y.toString());
+    line.setAttribute("marker-end", "url(#arrow)");
     line.setAttribute("data-start-node-id", edge.start_node_id.id);
     line.setAttribute("data-end-node-id", edge.end_node_id.id);
     line.setAttribute("stroke", "black");
+
     edges.appendChild(line);
+}
+
+
+function computeEdgeOffsetPosition(edge: Edge) {
+    const angle = Math.atan2(edge.end_position.y - edge.start_position.y, edge.end_position.x - edge.start_position.x);
+    const end_offset = nodeSize / 2 + 5;
+    const start_x = edge.start_position.x + end_offset * Math.cos(angle);
+    const start_y = edge.start_position.y + end_offset * Math.sin(angle);
+    const end_x = edge.end_position.x - end_offset * Math.cos(angle);
+    const end_y = edge.end_position.y - end_offset * Math.sin(angle);
+    return { start_x, start_y, end_x, end_y };
 }
 
 function addNodeToCanvas(node: GraphNode) {
@@ -267,7 +307,8 @@ function addNodeToCanvas(node: GraphNode) {
     rect.setAttribute("width", nodeSize.toString());
     rect.setAttribute("height", nodeSize.toString());
     rect.setAttribute("transform", `translate(${-nodeSize / 2}, ${-nodeSize / 2})`);
-    rect.setAttribute("rx", "2000");
+    const radius = node.node_type === NodeType.Place ? 0 : 2000;
+    rect.setAttribute("rx", radius.toString());
     rect.setAttribute("fill", "#eee");
     rect.setAttribute("stroke", "#ccc");
     rect.setAttribute("stroke-width", "1");
@@ -307,19 +348,29 @@ function removeNodeFromCanvas(node_id: string) {
     }
 }
 
-function updateEdges(node_id: string, x: number, y: number) {
+function updateEdges() {
     const edges = document.getElementsByClassName("edge");
+
     for (var i = edges.length - 1; i >= 0; i--) {
         const start_node_id = edges[i].getAttribute("data-start-node-id");
         const end_node_id = edges[i].getAttribute("data-end-node-id");
-        if (start_node_id === node_id) {
-            edges[i].setAttribute("x1", (x).toString());
-            edges[i].setAttribute("y1", (y).toString());
-        }
-        if (end_node_id === node_id) {
-            edges[i].setAttribute("x2", (x).toString());
-            edges[i].setAttribute("y2", (y).toString());
-        }
+        let start_node = canvas!.querySelector(`[data-id="${start_node_id}"]`);
+        let end_node = canvas!.querySelector(`[data-id="${end_node_id}"]`);
+
+        let start_position = { x: Number(start_node?.getAttribute("x")), y: Number(start_node?.getAttribute("y")) };
+        let end_position = { x: Number(end_node?.getAttribute("x")), y: Number(end_node?.getAttribute("y")) };
+
+        let { start_x, start_y, end_x, end_y } = computeEdgeOffsetPosition({
+            start_position: start_position,
+            end_position: end_position,
+            end_node_id: { id: start_node_id! },
+            start_node_id: { id: end_node_id! }
+        });
+
+        edges[i].setAttribute("x1", (start_x).toString());
+        edges[i].setAttribute("y1", (start_y).toString());
+        edges[i].setAttribute("x2", (end_x).toString());
+        edges[i].setAttribute("y2", (end_y).toString());
     }
 }
 
@@ -351,6 +402,26 @@ function renderEdges() {
     xhr.send();
 }
 
+function clearAll() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/clear");
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            var nodes = document.getElementById("nodes");
+            if (!nodes) throw new Error("nodes not found");
+            while (nodes.firstChild) {
+                nodes.removeChild(nodes.firstChild);
+            }
+            var edges = document.getElementById("edges");
+            if (!edges) throw new Error("edges not found");
+            while (edges.firstChild) {
+                edges.removeChild(edges.firstChild);
+            }
+        }
+    };
+    xhr.send();
+}
+
 
 canvas.addEventListener("mousedown", (event: MouseEvent) => {
     switch (state) {
@@ -366,6 +437,7 @@ canvas.addEventListener("mousedown", (event: MouseEvent) => {
             break;
         case State.Delete:
             deleteClick(event);
+            changeState(State.Drag);
             break;
     }
 });
@@ -411,9 +483,17 @@ canvas.addEventListener("mouseleave", (event: MouseEvent) => {
 });
 canvas.addEventListener("wheel", (event: WheelEvent) => { handleScroll(event) });
 
-document.getElementById('btn-create')?.addEventListener('click', () => { changeState(State.Create) });
+document.getElementById('btn-create-place')?.addEventListener('click', () => {
+    changeState(State.Create);
+    new_node_type = NodeType.Place;
+});
+document.getElementById('btn-create-transition')?.addEventListener('click', () => {
+    changeState(State.Create);
+    new_node_type = NodeType.Transition;
+});
 document.getElementById('btn-connect')?.addEventListener('click', () => { changeState(State.Connect) });
 document.getElementById('btn-delete')?.addEventListener('click', () => { changeState(State.Delete) });
+document.getElementById('btn-clear')?.addEventListener('click', () => { clearAll() });
 
 renderNodes();
 renderEdges();

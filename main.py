@@ -1,3 +1,4 @@
+import enum
 from flask import Flask, jsonify, render_template, request
 import random
 from dataclasses import dataclass
@@ -16,13 +17,19 @@ class NodeId:
 
 @dataclass(eq=True, order=True)
 class Point:
-    x: int
-    y: int
+    x: float
+    y: float
+
+
+class NodeType(str, enum.Enum):
+    PLACE = "place"
+    TRANSITION = "transition"
 
 
 @dataclass(eq=True, order=True)
 class Node:
     id: NodeId
+    node_type: NodeType
     position: Point
 
 
@@ -64,10 +71,11 @@ def index() -> flask.Response:
 def create_node() -> flask.Response:
     global nodes
 
-    x = int(request.form["x"])
-    y = int(request.form["y"])
+    x = float(request.form["x"])
+    y = float(request.form["y"])
+    node_type = NodeType(request.form["node_type"])
     node_id = new_id()
-    node = Node(node_id, Point(x, y))
+    node = Node(node_id, node_type, Point(x, y))
     nodes[node_id] = node
     print(node)
     return jsonify(node)
@@ -77,7 +85,7 @@ def create_node() -> flask.Response:
 def delete_node() -> flask.Response:
     global nodes, edges
 
-    node_id = NodeId(int(request.form["node_id"]))
+    node_id = NodeId(float(request.form["node_id"]))
     nodes.pop(node_id)
     # nodes = [node for node in nodes if node["id"] != node_id]
     for other_node in nodes.keys():
@@ -90,11 +98,11 @@ def delete_node() -> flask.Response:
 def move_node() -> flask.Response:
     global nodes
 
-    node_id = NodeId(int(request.form["node_id"]))
-    x = int(request.form["x"])
-    y = int(request.form["y"])
-    node = Node(node_id, Point(x, y))
-    nodes[node_id] = node
+    node_id = NodeId(float(request.form["node_id"]))
+    x = float(request.form["x"])
+    y = float(request.form["y"])
+    nodes[node_id].position = Point(x, y)
+
     for (edge_start_id, edge_end_id), edge in edges.items():
         if node_id == edge_start_id:
             edge.start_position = Point(x, y)
@@ -107,8 +115,8 @@ def move_node() -> flask.Response:
 def connect() -> flask.Response:
     global edges
 
-    start_node_id = NodeId(int(request.form["start_node_id"]))
-    end_node_id = NodeId(int(request.form["end_node_id"]))
+    start_node_id = NodeId(float(request.form["start_node_id"]))
+    end_node_id = NodeId(float(request.form["end_node_id"]))
     edge = Edge(
         start_node_id,
         end_node_id,
@@ -131,6 +139,20 @@ def get_edges() -> flask.Response:
     global edges
 
     return jsonify(list(edges.values()))
+
+
+@app.route("/clear", methods=["POST"])
+def clear() -> flask.Response:
+    global nodes, edges
+
+    nodes = {}
+    edges = {}
+    return flask.make_response("", 200)
+
+
+@app.route("/favicon.ico", methods=["GET"])
+def favicon() -> flask.Response:
+    return flask.make_response("", 204)
 
 
 if __name__ == "__main__":

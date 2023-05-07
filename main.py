@@ -112,7 +112,7 @@ def create_node() -> flask.Response:
 def delete_node() -> flask.Response:
     global nodes, edges
 
-    node_id = NodeId(float(request.form["node_id"]))
+    node_id = NodeId(int(request.form["node_id"]))
     nodes.pop(node_id)
     # nodes = [node for node in nodes if node["id"] != node_id]
     for other_node in nodes.keys():

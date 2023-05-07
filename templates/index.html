@@ -12,28 +12,29 @@
 <body>
     <div class="d-flex flex-column vh-100">
         <div class="d-flex flex-row flex-grow-1">
-            {% macro render_tree(tree, prefix) %}
+            {% macro render_tree(tree, path) %}
+            {% set prefix = path.replace(" ", "_").replace("/", "_") %}
             <ul id="collapse-{{ prefix }}" class="ps-3 collapse show collapse-{{ prefix }}">
                 {% for key, value in tree.items() %}
-                {% set id = prefix + key.replace(" ", "_") %}
+                {% set id = (prefix + "_" if prefix else "") + key.replace(" ", "_") %}
                 <li class="list-group-item">
                     {% if value is mapping %}
                     <span class="d-block" data-bs-toggle="collapse" data-bs-target=".collapse-{{ id }}"
                         href="#collapse-{{ id }}" role="button"
                         aria-controls="collapse-{{ id }} collapse-{{ id }}_caret" aria-expanded="true">
-                        <i class="bi bi-folder-fill me-2"></i>
+                        <i class="bi bi-folder-fill"></i>
                         {{ key }}
                         <i class="bi bi-caret-right collapse-{{ id }} collapse no-transition"
                             id="collapse-{{ id }}_caret"></i>
                         <i class="bi bi-caret-down collapse-{{ id }} collapse show no-transition"
                             id="collapse-{{ id }}_caret"></i>
                     </span>
-                    {{ render_tree(value, id) }}
+                    {{ render_tree(value, (path + "/" if path else "") + key) }}
                     {% else %}
-                    <a role="button"
+                    <a role="button" href="{{ url_for('edit_model', path=path+'/'+key) }}"
                         class="mb-1 icon-link link-dark link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-75-hover">
-                        <i class="bi bi-file-earmark"></i>
-                        {{key }}
+                        <i class="bi bi-file-earmark mb-2"></i>
+                        {{ key }}
                     </a>
                     {% endif %}
                 </li>
@@ -45,22 +46,44 @@
                 <h5>Process Models</h5>
                 <button type=" button" class="btn btn-primary btn-sm" id="btn-create-graph">New Process Model</button>
                 <div class="overflow-x-scroll">
-                    {{ render_tree(file_tree, "root") }}
+                    {{ render_tree(file_tree, "") }}
                 </div>
             </div>
 
 
             <div class="d-flex flex-column flex-fill">
                 <div class="btn-toolbar gap-2 m-2" role="toolbar">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-create-transition">Create
-                        Transition</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-create-place">Create
-                        Place</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-connect">Connect
-                        Nodes</button>
-                    <button type="button" class="btn btn-outline-warning btn-sm" id="btn-delete">Delete Nodes</button>
-                    <button type="button" class="btn btn-outline-warning btn-sm" id="btn-clear">Clear</button>
-                    <span class="state" id="state"></span>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-create-transition">
+                        <i class="bi bi-plus-square-fill"></i>
+                        Create Transitions
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-create-place">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        Create Places
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-connect">
+                        <i class="bi bi-arrow-left-right"></i>
+                        Connect Nodes
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-delete">
+                        <i class="bi bi-eraser-fill"></i>
+                        Delete Nodes
+                    </button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal"
+                        data-bs-target="#clearModal">
+                        <i class="bi bi-trash3-fill"></i>
+                        Clear
+                    </button>
+                    <div class="flex-fill"></div>
+                    <button type="button" class="btn btn-outline-success btn-sm disabled" id="btn-save">
+                        <i class="bi bi-save"></i>
+                        Save
+                        Changes</button>
+                    <button type="button" class="btn btn-outline-primary
+                    btn-sm" id="btn-save-as">
+                        <i class="bi bi-share"></i>
+                        Share
+                    </button>
                 </div>
 
                 <svg class="no-select flex-fill" id="canvas">
@@ -72,6 +95,27 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="clearModal" tabindex="-1" aria-labelledby="clearModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="clearModalLabel">Clear model</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete all nodes and edges?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal" id="btn-clear">Clear
+                        everything</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"

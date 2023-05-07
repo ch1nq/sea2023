@@ -51,6 +51,10 @@ type Edge = {
 
 let state: State = State.Move;
 let moveState: MoveState = MoveState.None;
+let model_id: string = (() => {
+    const url = new URL(window.location.href);
+    return url.searchParams.get("model_id")!;
+})();
 
 const state_buttons = {
     [State.Move]: document.getElementById('btn-move')!,
@@ -68,11 +72,6 @@ if (!canvas || !(canvas instanceof SVGSVGElement)) {
 
 
 function changeState(newState: State) {
-    const stateText = document.getElementById("state");
-    if (!stateText) {
-        throw new Error("stateText not found");
-    }
-    stateText.textContent = newState;
     state = newState;
     selected_node = null;
 }
@@ -186,7 +185,7 @@ function moveEnd(_event: MouseEvent) {
         var xhr = new XMLHttpRequest();
         xhr.open("POST", "/move");
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        xhr.send(`node_id=${node_id}&x=${x}&y=${y}`);
+        xhr.send(`model_id=${model_id}&node_id=${node_id}&x=${x}&y=${y}`);
         selected_node = null;
     }
     moveState = MoveState.None;
@@ -221,7 +220,7 @@ function connectClick(event: MouseEvent) {
                 addEdgeToCanvas(edge);
             }
         };
-        xhr.send(`start_node_id=${start_node_id}&end_node_id=${end_node_id}`);
+        xhr.send(`model_id=${model_id}&start_node_id=${start_node_id}&end_node_id=${end_node_id}`);
 
         selected_node = null;
     } else {
@@ -243,7 +242,7 @@ function createClick(event: MouseEvent, new_node_type: NodeType) {
             addNodeToCanvas(node);
         }
     };
-    xhr.send(`x=${point.x}&y=${point.y}&node_type=${node_type}`);
+    xhr.send(`model_id=${model_id}&x=${point.x}&y=${point.y}&node_type=${node_type}`);
 }
 
 function deleteClick(event: MouseEvent) {
@@ -267,7 +266,7 @@ function deleteClick(event: MouseEvent) {
             removeNodeFromCanvas(node_id!);
         }
     };
-    xhr.send(`node_id=${node_id}`);
+    xhr.send(`model_id=${model_id}&node_id=${node_id}`);
 }
 
 function addEdgeToCanvas(edge: Edge) {
@@ -320,6 +319,7 @@ function addNodeToCanvas(node: GraphNode) {
 
     var node_group = document.createElementNS("http://www.w3.org/2000/svg", "g");
     node_group.setAttribute("class", "node-group");
+    node_group.setAttribute("data-id", node.id.id);
 
     var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     rect.setAttribute("class", `node node-${node.node_type.toLowerCase()}`);
@@ -344,13 +344,11 @@ function removeNodeFromCanvas(node_id: string) {
     if (!nodes) {
         throw new Error("nodes not found");
     }
-    var node_elements = document.querySelectorAll(`[data-id="${node_id}"]`);
+    var node_elements = nodes.querySelectorAll(`[data-id="${node_id}"]`);
     if (!node_elements) {
         throw new Error("node not found");
     }
-    node_elements.forEach(element => {
-        nodes?.removeChild(element);
-    });
+    node_elements.forEach(element => { element.remove() });
     var edges = document.getElementsByClassName("edge");
     for (var i = edges.length - 1; i >= 0; i--) {
         const start_node_id = edges[i].getAttribute("data-start-node-id");
@@ -367,8 +365,8 @@ function updateEdges() {
     for (var i = edges.length - 1; i >= 0; i--) {
         const start_node_id = edges[i].getAttribute("data-start-node-id");
         const end_node_id = edges[i].getAttribute("data-end-node-id");
-        let start_node = canvas!.querySelector(`[data-id="${start_node_id}"]`);
-        let end_node = canvas!.querySelector(`[data-id="${end_node_id}"]`);
+        let start_node = canvas!.querySelector(`rect[data-id="${start_node_id}"]`);
+        let end_node = canvas!.querySelector(`rect[data-id="${end_node_id}"]`);
 
         let start_position = { x: Number(start_node?.getAttribute("x")), y: Number(start_node?.getAttribute("y")) };
         let end_position = { x: Number(end_node?.getAttribute("x")), y: Number(end_node?.getAttribute("y")) };
@@ -389,7 +387,7 @@ function updateEdges() {
 
 function renderNodes() {
     var xhr = new XMLHttpRequest();
-    xhr.open("GET", "/nodes");
+    xhr.open("GET", `/nodes?model_id=${model_id}`);
     xhr.onreadystatechange = () => {
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
             var nodes = JSON.parse(xhr.responseText);
@@ -403,7 +401,7 @@ function renderNodes() {
 
 function renderEdges() {
     var xhr = new XMLHttpRequest();
-    xhr.open("GET", "/edges");
+    xhr.open("GET", `/edges?model_id=${model_id}`);
     xhr.onreadystatechange = () => {
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
             var edges = JSON.parse(xhr.responseText);
@@ -432,7 +430,7 @@ function clearAll() {
             }
         }
     };
-    xhr.send();
+    xhr.send(`model_id=${model_id}`);
 }
 
 

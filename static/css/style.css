@@ -41,11 +41,11 @@ i.no-transition.collapsing {
 }
 
 .node-transition {
-    rx: 2000px;
+    rx: 0;
 }
 
 .node-place {
-    rx: 0;
+    rx: 2000px;
 }
 
 .node-text {

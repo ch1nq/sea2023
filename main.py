@@ -1,67 +1,18 @@
-import enum
 import logging
 import os
-import random
-from dataclasses import dataclass
 
 import flask
 import ngrok
+
 from flask import Flask, jsonify, render_template, request
+import pydantic
+import process_model
 
 
 logging.basicConfig(level=logging.INFO)
-# tunnel = ngrok.werkzeug_develop()
 app = Flask(__name__)
 
-MAX_NODES = 10000
-
-
-@dataclass(order=True, frozen=True)
-class NodeId:
-    id: int
-
-
-@dataclass(eq=True, order=True)
-class Point:
-    x: float
-    y: float
-
-
-class NodeType(str, enum.Enum):
-    PLACE = "place"
-    TRANSITION = "transition"
-
-
-@dataclass(eq=True, order=True)
-class Node:
-    id: NodeId
-    node_type: NodeType
-    position: Point
-
-
-@dataclass(eq=True, order=True)
-class Edge:
-    start_node_id: NodeId
-    end_node_id: NodeId
-    start_position: Point
-    end_position: Point
-
-
-@dataclass(eq=True, order=True)
-class Graph:
-    nodes: dict[NodeId, Node]
-    edges: dict[tuple[NodeId, NodeId], Edge]
-
-
-nodes: dict[NodeId, Node] = {}
-edges: dict[tuple[NodeId, NodeId], Edge] = {}
-
-
-def new_id() -> NodeId:
-    id = random.randint(0, MAX_NODES)
-    while id in nodes.keys():
-        id = random.randint(0, MAX_NODES)
-    return NodeId(id)
+open_models: dict[str, process_model.ProcessModel] = {}
 
 
 def get_file_tree(root_dir: os.PathLike) -> dict[str, dict[str, bool]]:
@@ -78,103 +29,155 @@ def get_file_tree(root_dir: os.PathLike) -> dict[str, dict[str, bool]]:
     return file_tree
 
 
-@app.route("/", methods=["GET", "POST"])
-def index() -> flask.Response:
-    global nodes, edges
+def get_model(path: os.PathLike) -> process_model.ProcessModel | None:
+    """Get mutable model from file."""
+    global open_models
 
-    file_tree = get_file_tree("models")
+    try:
+        model = open_models.get(path, process_model.ProcessModel.load(path))
+    except FileNotFoundError:
+        logging.error(f"File not found {path}")
+        return None
+    except pydantic.error_wrappers.ValidationError:
+        logging.error(f"Invalid model file {path}")
+        return None
+
+    return model
+
+
+@app.route("/edit", methods=["GET"])
+def edit_model() -> flask.Response:
+    global open_models
+
+    model_id = request.args.get("model_id")
+    match get_model(model_id):
+        case None:
+            return flask.make_response("", 404)
+        case model:
+            open_models[model_id] = model
 
     return flask.make_response(
         render_template(
             "index.html",
-            nodes=nodes.values(),
-            edges=edges.values(),
-            file_tree=file_tree,
+            nodes=model.get_nodes(),
+            edges=model.get_edges(),
+            file_tree=get_file_tree("models"),
         )
     )
 
 
+@app.route("/get_model_id", methods=["POST"])
+def get_model_id() -> flask.Response:
+    global open_models
+
+    match get_model(request.form["model_id"]):
+        case None:
+            return flask.make_response("", 404)
+        case model:
+            return jsonify(model.id)
+
+
 @app.route("/create", methods=["POST"])
 def create_node() -> flask.Response:
-    global nodes
+    global open_models
 
+    model_id = request.form["model_id"]
     x = float(request.form["x"])
     y = float(request.form["y"])
-    node_type = NodeType(request.form["node_type"])
-    node_id = new_id()
-    node = Node(node_id, node_type, Point(x, y))
-    nodes[node_id] = node
-    print(node)
-    return jsonify(node)
+    node_type = process_model.NodeType(request.form["node_type"])
+
+    match get_model(model_id):
+        case None:
+            return flask.make_response("", 404)
+        case model:
+            node = model.add_node(node_type, x, y)
+            return jsonify(node)
 
 
 @app.route("/delete", methods=["POST"])
 def delete_node() -> flask.Response:
-    global nodes, edges
+    global open_models
 
-    node_id = NodeId(int(request.form["node_id"]))
-    nodes.pop(node_id)
-    # nodes = [node for node in nodes if node["id"] != node_id]
-    for other_node in nodes.keys():
-        edges.pop((node_id, other_node), None)
-        edges.pop((other_node, node_id), None)
-    return flask.make_response("", 200)
+    node_id = process_model.NodeId(int(request.form["node_id"]))
+
+    match get_model(request.form["model_id"]):
+        case None:
+            return flask.make_response("", 404)
+        case model:
+            model.delete_node(node_id)
+            return flask.make_response("", 200)
 
 
 @app.route("/move", methods=["POST"])
 def move_node() -> flask.Response:
-    global nodes
+    global open_models
 
-    node_id = NodeId(float(request.form["node_id"]))
+    path = request.form["model_id"]
+    node_id = process_model.NodeId(float(request.form["node_id"]))
     x = float(request.form["x"])
     y = float(request.form["y"])
-    nodes[node_id].position = Point(x, y)
 
-    for (edge_start_id, edge_end_id), edge in edges.items():
-        if node_id == edge_start_id:
-            edge.start_position = Point(x, y)
-        elif node_id == edge_end_id:
-            edge.end_position = Point(x, y)
-    return flask.make_response("", 204)
+    match get_model(path):
+        case None:
+            return flask.make_response("", 404)
+        case model:
+            model.move_node(node_id, x, y)
+            return flask.make_response("", 204)
 
 
 @app.route("/connect", methods=["POST"])
 def connect() -> flask.Response:
-    global edges
+    global open_models
 
-    start_node_id = NodeId(float(request.form["start_node_id"]))
-    end_node_id = NodeId(float(request.form["end_node_id"]))
-    edge = Edge(
-        start_node_id,
-        end_node_id,
-        Point(nodes[start_node_id].position.x, nodes[start_node_id].position.y),
-        Point(nodes[end_node_id].position.x, nodes[end_node_id].position.y),
-    )
-    edges[(start_node_id, end_node_id)] = edge
-    return jsonify(edge)
+    path = request.form["model_id"]
+    start_node_id = process_model.NodeId(float(request.form["start_node_id"]))
+    end_node_id = process_model.NodeId(float(request.form["end_node_id"]))
+
+    match get_model(path):
+        case None:
+            return flask.make_response("", 404)
+        case model:
+            edge = model.connect(start_node_id, end_node_id)
+            if edge is None:
+                logging.info("Invalid connection")
+                return flask.make_response("", 204)
+
+            logging.info(f"Connecting {start_node_id} to {end_node_id}")
+            return jsonify(edge)
 
 
 @app.route("/nodes", methods=["GET"])
 def get_nodes() -> flask.Response:
-    global nodes
+    global open_models
 
-    return jsonify(list(nodes.values()))
+    match get_model(request.args.get("model_id")):
+        case None:
+            return flask.make_response("", 404)
+        case model:
+            return jsonify(model.get_nodes())
 
 
 @app.route("/edges", methods=["GET"])
 def get_edges() -> flask.Response:
-    global edges
+    global open_models
 
-    return jsonify(list(edges.values()))
+    match get_model(request.args.get("model_id")):
+        case None:
+            return flask.make_response("", 404)
+        case model:
+            return jsonify(model.get_edges())
 
 
 @app.route("/clear", methods=["POST"])
 def clear() -> flask.Response:
-    global nodes, edges
+    global open_models
 
-    nodes = {}
-    edges = {}
-    return flask.make_response("", 200)
+    match get_model(request.form["model_id"]):
+        case None:
+            return flask.make_response("", 404)
+        case model:
+            model.clear()
+            return flask.make_response("", 204)
 
 
 @app.route("/favicon.ico", methods=["GET"])
@@ -183,4 +186,6 @@ def favicon() -> flask.Response:
 
 
 if __name__ == "__main__":
+    if os.environ.get("NGROK_AUTH_TOKEN"):
+        tunnel = ngrok.werkzeug_develop()
     app.run(debug=True)

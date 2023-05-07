@@ -7,15 +7,17 @@ let global_zoom = 1;
 const nodeSize = 50;
 
 enum State {
-    Drag = "drag",
-    Create = "create",
+    Move = "move",
+    CreatePlace = "create_place",
+    CreateTransition = "create_transition",
     Connect = "connect",
     Delete = "delete",
+    Clear = "clear",
 }
 
-enum DragState {
-    DraggingNode = "dragging_node",
-    DraggingGraph = "dragging_graph",
+enum MoveState {
+    MovingNode = "moving_node",
+    MovingGraph = "moving_graph",
     None = "none",
 }
 
@@ -47,10 +49,17 @@ type Edge = {
     end_position: Position;
 };
 
-let state: State = State.Drag;
-let dragState: DragState = DragState.None;
-let new_node_type: NodeType = NodeType.Place;
+let state: State = State.Move;
+let moveState: MoveState = MoveState.None;
 
+const state_buttons = {
+    [State.Move]: document.getElementById('btn-move')!,
+    [State.CreatePlace]: document.getElementById('btn-create-place')!,
+    [State.CreateTransition]: document.getElementById('btn-create-transition')!,
+    [State.Connect]: document.getElementById('btn-connect')!,
+    [State.Delete]: document.getElementById('btn-delete')!,
+    [State.Clear]: document.getElementById('btn-clear')!,
+};
 
 var canvas = document.getElementById("canvas");
 if (!canvas || !(canvas instanceof SVGSVGElement)) {
@@ -66,6 +75,17 @@ function changeState(newState: State) {
     stateText.textContent = newState;
     state = newState;
     selected_node = null;
+}
+
+function toggleState(newState: State) {
+    if (state === newState) {
+        changeState(State.Move);
+        state_buttons[newState].classList.remove("active");
+    } else {
+        state_buttons[state]?.classList.remove("active");
+        changeState(newState);
+        state_buttons[newState].classList.add("active");
+    }
 }
 
 function transformCoords(x: number, y: number, screenToGraph: boolean): SVGPoint {
@@ -96,7 +116,7 @@ function screenToGraphCoords(x: number, y: number): SVGPoint {
 }
 
 
-function dragStart(event: MouseEvent) {
+function moveStart(event: MouseEvent) {
     if (event.target instanceof SVGRectElement) {
         selected_node = event.target;
     } else if (event.target instanceof SVGTextElement) {
@@ -105,7 +125,7 @@ function dragStart(event: MouseEvent) {
         selected_node = null;
         offset_x = event.clientX;
         offset_y = event.clientY;
-        dragState = DragState.DraggingGraph;
+        moveState = MoveState.MovingGraph;
         return;
     } else {
         return;
@@ -116,7 +136,7 @@ function dragStart(event: MouseEvent) {
     );
     offset_x = event.clientX - point.x;
     offset_y = event.clientY - point.y;
-    dragState = DragState.DraggingNode;
+    moveState = MoveState.MovingNode;
 }
 
 function updateGraphTransform() {
@@ -140,8 +160,8 @@ function updateGraphTransform() {
 
 
 
-function drag(event: MouseEvent) {
-    if (dragState === DragState.DraggingNode && selected_node) {
+function move(event: MouseEvent) {
+    if (moveState === MoveState.MovingNode && selected_node) {
         const point = screenToGraphCoords(event.clientX - offset_x, event.clientY - offset_y);
         selected_node.setAttribute("x", point.x.toString());
         selected_node.setAttribute("y", point.y.toString());
@@ -149,7 +169,7 @@ function drag(event: MouseEvent) {
         const label = selected_node.nextElementSibling as SVGTextElement;
         label.setAttribute("x", point.x.toString());
         label.setAttribute("y", point.y.toString());
-    } else if (dragState === DragState.DraggingGraph) {
+    } else if (moveState === MoveState.MovingGraph) {
         global_offset_x += event.clientX - offset_x;
         global_offset_y += event.clientY - offset_y;
         offset_x = event.clientX;
@@ -158,8 +178,8 @@ function drag(event: MouseEvent) {
     }
 }
 
-function dragEnd(_event: MouseEvent) {
-    if (dragState === DragState.DraggingNode) {
+function moveEnd(_event: MouseEvent) {
+    if (moveState === MoveState.MovingNode) {
         var node_id = selected_node!.getAttribute("data-id")!;
         var x = parseInt(selected_node!.getAttribute("x")!);
         var y = parseInt(selected_node!.getAttribute("y")!);
@@ -169,7 +189,7 @@ function dragEnd(_event: MouseEvent) {
         xhr.send(`node_id=${node_id}&x=${x}&y=${y}`);
         selected_node = null;
     }
-    dragState = DragState.None;
+    moveState = MoveState.None;
 }
 
 function handleScroll(event: WheelEvent) {
@@ -204,14 +224,13 @@ function connectClick(event: MouseEvent) {
         xhr.send(`start_node_id=${start_node_id}&end_node_id=${end_node_id}`);
 
         selected_node = null;
-        changeState(State.Drag);
     } else {
         selected_node = node;
     }
 
 }
 
-function createClick(event: MouseEvent) {
+function createClick(event: MouseEvent, new_node_type: NodeType) {
     var point = screenToGraphCoords(event.clientX, event.clientY);
     var node_type = new_node_type;
 
@@ -278,10 +297,8 @@ function addEdgeToCanvas(edge: Edge) {
     line.setAttribute("y1", start_y.toString());
     line.setAttribute("x2", end_x.toString());
     line.setAttribute("y2", end_y.toString());
-    line.setAttribute("marker-end", "url(#arrow)");
     line.setAttribute("data-start-node-id", edge.start_node_id.id);
     line.setAttribute("data-end-node-id", edge.end_node_id.id);
-    line.setAttribute("stroke", "black");
 
     edges.appendChild(line);
 }
@@ -300,30 +317,26 @@ function computeEdgeOffsetPosition(edge: Edge) {
 function addNodeToCanvas(node: GraphNode) {
     var nodes = document.getElementById("nodes");
     if (!nodes) throw new Error("nodes not found");
+
+    var node_group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    node_group.setAttribute("class", "node-group");
+
     var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    rect.setAttribute("class", "node");
+    rect.setAttribute("class", `node node-${node.node_type.toLowerCase()}`);
     rect.setAttribute("x", (node.position.x).toString());
     rect.setAttribute("y", (node.position.y).toString());
-    rect.setAttribute("width", nodeSize.toString());
-    rect.setAttribute("height", nodeSize.toString());
-    rect.setAttribute("transform", `translate(${-nodeSize / 2}, ${-nodeSize / 2})`);
-    const radius = node.node_type === NodeType.Place ? 0 : 2000;
-    rect.setAttribute("rx", radius.toString());
-    rect.setAttribute("fill", "#eee");
-    rect.setAttribute("stroke", "#ccc");
-    rect.setAttribute("stroke-width", "1");
     rect.setAttribute("data-id", node.id.id);
-    nodes.appendChild(rect);
+
     var text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("class", "node-text");
     text.setAttribute("x", (node.position.x).toString());
     text.setAttribute("y", (node.position.y).toString());
     text.setAttribute("data-id", node.id.id);
-    text.setAttribute("font-size", "20");
-    text.setAttribute("font-family", "Arial");
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("dominant-baseline", "middle");
     text.textContent = node.id.id;
-    nodes.appendChild(text);
+
+    node_group.appendChild(rect);
+    node_group.appendChild(text);
+    nodes.appendChild(node_group);
 }
 
 function removeNodeFromCanvas(node_id: string) {
@@ -425,75 +438,58 @@ function clearAll() {
 
 canvas.addEventListener("mousedown", (event: MouseEvent) => {
     switch (state) {
-        case State.Drag:
-            dragStart(event);
+        case State.Move:
+            moveStart(event);
             break;
-        case State.Create:
-            createClick(event);
-            changeState(State.Drag);
+        case State.CreatePlace:
+            createClick(event, NodeType.Place);
+            break;
+        case State.CreateTransition:
+            createClick(event, NodeType.Transition);
             break;
         case State.Connect:
             connectClick(event);
             break;
         case State.Delete:
             deleteClick(event);
-            changeState(State.Drag);
             break;
     }
 });
 canvas.addEventListener("mousemove", (event: MouseEvent) => {
     switch (state) {
-        case State.Drag:
-            drag(event);
+        case State.Move:
+            move(event);
             break;
-        case State.Create:
-            break;
-        case State.Connect:
-            break;
-        case State.Delete:
+        default:
             break;
     }
 });
 canvas.addEventListener("mouseup", (event: MouseEvent) => {
     switch (state) {
-        case State.Drag:
-            dragEnd(event);
+        case State.Move:
+            moveEnd(event);
             break;
-        case State.Create:
-            break;
-        case State.Connect:
-            break;
-        case State.Delete:
+        default:
             break;
     }
 }
 );
 canvas.addEventListener("mouseleave", (event: MouseEvent) => {
     switch (state) {
-        case State.Drag:
-            dragEnd(event);
+        case State.Move:
+            moveEnd(event);
             break;
-        case State.Create:
-            break;
-        case State.Connect:
-            break;
-        case State.Delete:
+        default:
             break;
     }
 });
 canvas.addEventListener("wheel", (event: WheelEvent) => { handleScroll(event) });
 
-document.getElementById('btn-create-place')?.addEventListener('click', () => {
-    changeState(State.Create);
-    new_node_type = NodeType.Place;
-});
-document.getElementById('btn-create-transition')?.addEventListener('click', () => {
-    changeState(State.Create);
-    new_node_type = NodeType.Transition;
-});
-document.getElementById('btn-connect')?.addEventListener('click', () => { changeState(State.Connect) });
-document.getElementById('btn-delete')?.addEventListener('click', () => { changeState(State.Delete) });
-document.getElementById('btn-clear')?.addEventListener('click', () => { clearAll() });
+state_buttons.create_place.addEventListener("click", () => { toggleState(State.CreatePlace) });
+state_buttons.create_transition.addEventListener("click", () => { toggleState(State.CreateTransition) });
+state_buttons.connect.addEventListener("click", () => { toggleState(State.Connect) });
+state_buttons.delete.addEventListener("click", () => { toggleState(State.Delete) });
+state_buttons.clear.addEventListener("click", () => { clearAll() });
 
 renderNodes();
 renderEdges();

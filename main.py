@@ -1,5 +1,6 @@
 import enum
 import logging
+import os
 import random
 from dataclasses import dataclass
 
@@ -9,7 +10,7 @@ from flask import Flask, jsonify, render_template, request
 
 
 logging.basicConfig(level=logging.INFO)
-tunnel = ngrok.werkzeug_develop()
+# tunnel = ngrok.werkzeug_develop()
 app = Flask(__name__)
 
 MAX_NODES = 10000
@@ -63,12 +64,33 @@ def new_id() -> NodeId:
     return NodeId(id)
 
 
+def get_file_tree(root_dir: os.PathLike) -> dict[str, dict[str, bool]]:
+    file_tree = {}
+    for root, _dirs, files in os.walk(root_dir):
+        current_level = file_tree
+        path = root.split(os.sep)
+        for dir in path:
+            if dir not in current_level:
+                current_level[dir] = {}
+            current_level = current_level[dir]
+        for file in files:
+            current_level[file] = True
+    return file_tree
+
+
 @app.route("/", methods=["GET", "POST"])
 def index() -> flask.Response:
     global nodes, edges
 
+    file_tree = get_file_tree("models")
+
     return flask.make_response(
-        render_template("index.html", nodes=nodes.values(), edges=edges.values())
+        render_template(
+            "index.html",
+            nodes=nodes.values(),
+            edges=edges.values(),
+            file_tree=file_tree,
+        )
     )
 
 
@@ -161,4 +183,4 @@ def favicon() -> flask.Response:
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0")
+    app.run(debug=True)

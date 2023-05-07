@@ -1,0 +1,75 @@
+:root {
+    --color-primary: var(--bs-primary);
+    --color-dark: var(--bs-gray-800);
+    --color-medium: var(--bs-gray-400);
+    --color-light: var(--bs-gray-200);
+    --scrollbar-width: 0px;
+    --scrollbar-height: 0px;
+    --node-size: 50px;
+    --node-text-size: 20px;
+    --node-highlight-color: var(--color-primary);
+    --edge-color: var(--color-dark);
+    --node-stroke-color: var(--color-dark);
+    --edge-thickness: 1px;
+}
+
+body {
+    height: 100%;
+}
+
+.no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+#canvas {
+    background-color: #fff;
+    /* height: 100vh; */
+}
+
+i.no-transition.collapsing {
+    display: none;
+}
+
+.node {
+    stroke: var(--node-stroke-color);
+    stroke-width: var(--edge-thickness);
+    width: var(--node-size);
+    height: var(--node-size);
+    transform: translate(calc(-0.5 * var(--node-size)), calc(-0.5 * var(--node-size)));
+}
+
+.node-transition {
+    rx: 2000px;
+}
+
+.node-place {
+    rx: 0;
+}
+
+.node-text {
+    fill: var(--color-dark);
+    font-size: var(--node-text-size);
+    font-family: "Arial", sans-serif;
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
+
+.node-group {
+    fill: var(--color-light);
+}
+
+.node-group:hover {
+    fill: var(--color-medium);
+}
+
+.node-selected {
+    fill: var(--node-highlight-color);
+}
+
+.edge {
+    stroke: var(--edge-color);
+    stroke-width: var(--edge-thickness);
+    marker-end: url(#arrow);
+}

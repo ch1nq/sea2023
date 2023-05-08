@@ -46,6 +46,18 @@ def get_model(path: os.PathLike) -> process_model.ProcessModel | None:
     return model
 
 
+@app.route("/new_model", methods=["POST"])
+def new_model() -> flask.Response:
+    global open_models
+
+    model_id = request.form["model_id"]
+    model = process_model.ProcessModel(id=model_id)
+    model.save(model_id)
+    open_models[model_id] = model
+
+    return flask.redirect(f"/edit?model_id={model_id}")
+
+
 @app.route("/edit", methods=["GET"])
 def edit_model() -> flask.Response:
     global open_models
@@ -180,7 +192,7 @@ def clear() -> flask.Response:
             return flask.make_response("", 404)
         case model:
             model.clear()
-            return flask.make_response("", 204)
+            return flask.make_response("", 200)
 
 
 @app.route("/save", methods=["POST"])

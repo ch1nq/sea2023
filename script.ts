@@ -483,7 +483,6 @@ function save() {
     xhr.send(`model_id=${model_id}`);
 }
 
-
 canvas.addEventListener("mousedown", (event: MouseEvent) => {
     switch (state) {
         case State.Move:

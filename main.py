@@ -25,7 +25,8 @@ def get_file_tree(root_dir: os.PathLike) -> dict[str, dict[str, bool]]:
                 current_level[dir] = {}
             current_level = current_level[dir]
         for file in files:
-            current_level[file] = True
+            if file.endswith(".pm"):
+                current_level[file] = True
     return file_tree
 
 
@@ -62,6 +63,7 @@ def edit_model() -> flask.Response:
             nodes=model.get_nodes(),
             edges=model.get_edges(),
             file_tree=get_file_tree("models"),
+            current_model_id=model_id,
         )
     )
 

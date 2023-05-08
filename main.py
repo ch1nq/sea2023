@@ -30,9 +30,12 @@ def get_file_tree(root_dir: os.PathLike) -> dict[str, dict[str, bool]]:
     return file_tree
 
 
-def get_model(path: os.PathLike) -> process_model.ProcessModel | None:
+def get_model(path: os.PathLike | None) -> process_model.ProcessModel | None:
     """Get mutable model from file."""
     global open_models
+
+    if path is None:
+        return None
 
     try:
         model = open_models.get(path, process_model.ProcessModel.load(path))
@@ -58,26 +61,38 @@ def new_model() -> flask.Response:
     return flask.redirect(f"/edit?model_id={model_id}")
 
 
+@app.route("/", methods=["GET"])
+def index() -> flask.Response:
+    return flask.redirect("/edit")
+
+
 @app.route("/edit", methods=["GET"])
 def edit_model() -> flask.Response:
     global open_models
 
-    model_id = request.args.get("model_id")
+    model_id = request.args.get("model_id", None)
     match get_model(model_id):
         case None:
-            return flask.make_response("", 404)
+            return flask.make_response(
+                render_template(
+                    "index.html",
+                    nodes=[],
+                    edges=[],
+                    file_tree=get_file_tree("models"),
+                    current_model_id="",
+                )
+            )
         case model:
             open_models[model_id] = model
-
-    return flask.make_response(
-        render_template(
-            "index.html",
-            nodes=model.get_nodes(),
-            edges=model.get_edges(),
-            file_tree=get_file_tree("models"),
-            current_model_id=model_id,
-        )
-    )
+            return flask.make_response(
+                render_template(
+                    "index.html",
+                    nodes=model.get_nodes(),
+                    edges=model.get_edges(),
+                    file_tree=get_file_tree("models"),
+                    current_model_id=model_id,
+                )
+            )
 
 
 @app.route("/get_model_id", methods=["POST"])

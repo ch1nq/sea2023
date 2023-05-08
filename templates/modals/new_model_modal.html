@@ -1,0 +1,24 @@
+<div class="modal fade" id="newModelModal" tabindex="-1" role="dialog" aria-labelledby="newModelModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newModelModalLabel">Create a New Model</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/new_model" method="post">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="model_location">Model Location</label>
+                        <input type="text" class="form-control" id="model_id" name="model_id"
+                            placeholder="Enter a model location">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Model</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

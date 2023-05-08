@@ -1,0 +1,12 @@
+{% from "file_tree.html" import render_tree with context %}
+
+<div class="p-2 border-end vh-100 d-flex flex-column" style="width: 20em">
+    <button type=" button" class="btn btn-primary btn-sm" id="btn-create-model" data-bs-toggle="modal"
+        data-bs-target="#newModelModal">
+        New Process Model
+    </button>
+    <hr>
+    <div class="overflow-x-scroll">
+        {{ render_tree(file_tree, "") }}
+    </div>
+</div>

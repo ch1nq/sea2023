@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!DOCTYPE html lang="en">
 <html>
 
 <head>
-    <title>Node Editor</title>
+    <title>Process Model Editor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
@@ -12,57 +12,10 @@
 <body>
     <div class="d-flex flex-column vh-100">
         <div class="d-flex flex-row flex-grow-1">
-            {% macro render_tree(tree, path) %}
-            {% set prefix = path.replace(" ", "_").replace("/", "_") %}
-            <ul id="collapse-{{ prefix }}" class="ps-3 collapse show collapse-{{ prefix }}">
-                {% for key, value in tree.items() %}
-                {% set id = (prefix + "_" if prefix else "") + key.replace(" ", "_") %}
-                <li class="list-group-item">
-                    {% if value is mapping %}
-                    <span class="d-block" data-bs-toggle="collapse" data-bs-target=".collapse-{{ id }}"
-                        href="#collapse-{{ id }}" role="button"
-                        aria-controls="collapse-{{ id }} collapse-{{ id }}_caret" aria-expanded="true">
-                        <i class="bi bi-folder-fill"></i>
-                        {{ key }}
-                        <i class="bi bi-caret-right collapse-{{ id }} collapse no-transition"
-                            id="collapse-{{ id }}_caret"></i>
-                        <i class="bi bi-caret-down collapse-{{ id }} collapse show no-transition"
-                            id="collapse-{{ id }}_caret"></i>
-                    </span>
-                    {{ render_tree(value, (path + "/" if path else "") + key) }}
-                    {% else %}
-                    <a role="button" href="{{ url_for('edit_model', model_id=path+'/'+key) }}"
-                        class="mb-1 icon-link link-dark link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-75-hover">
-                        {% if current_model_id == path+'/'+key %}
-                        <i class="bi bi-file-earmark-fill mb-2"></i>
-                        <strong>{{ key }}</strong>
-                        {% else %}
-                        <i class="bi bi-file-earmark mb-2"></i>
-                        {{ key }}
-                        {% endif %}
-                    </a>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-            {% endmacro %}
-
-            <div class="p-2 border-end vh-100 d-flex flex-column" style="width: 20em">
-                <h5>Process Models</h5>
-                <button type=" button" class="btn btn-primary btn-sm" id="btn-create-model" data-bs-toggle="modal"
-                    data-bs-target="#newModelModal">
-                    New Process Model
-                </button>
-                <div class="overflow-x-scroll">
-                    {{ render_tree(file_tree, "") }}
-                </div>
-            </div>
+            {% include('sidebar.html') %}
             <div class="d-flex flex-column flex-fill">
                 {% if not current_model_id %}
-                <div class="text-center mt-5">
-                    <h1>Hello, welcome back</h1>
-                    <p class="lead">Select a model to edit or create a new one.</p>
-                </div>
+                {% include('welcome_splash.html') %}
                 {% else %}
                 {% include('editor_toolbar.html') %}
                 {% include('canvas.html') %}
@@ -71,9 +24,11 @@
         </div>
     </div>
 
+    {% include('modals/clear_modal.html') %}
     {% include('modals/new_model_modal.html') %}
     {% include('modals/todo_modal.html') %}
-    {% include('modals/clear_modal.html') %}
+    {% include('modals/new_simulation_modal.html') %}
+    {% include('modals/save_preset_modal.html') %}
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"

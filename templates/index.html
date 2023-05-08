@@ -75,10 +75,13 @@
                         Clear
                     </button>
                     <div class="flex-fill"></div>
-                    <button type="button" class="btn btn-outline-success btn-sm disabled" id="btn-save">
+                    <div id="save-success-alert" class="fade mt-1" type="alert">
+                        <i class="bi bi-check-circle-fill text-success mt-1" id="save-success"></i>
+                    </div>
+                    <button type="button" class="btn btn-outline-success btn-sm" id="btn-save">
                         <i class="bi bi-save"></i>
-                        Save
-                        Changes</button>
+                        Save Changes
+                    </button>
                     <button type="button" class="btn btn-outline-primary
                     btn-sm" id="btn-save-as">
                         <i class="bi bi-share"></i>
@@ -95,6 +98,7 @@
             </div>
         </div>
     </div>
+
 
     <div class="modal fade" id="clearModal" tabindex="-1" aria-labelledby="clearModalLabel" aria-hidden="true">
         <div class="modal-dialog">

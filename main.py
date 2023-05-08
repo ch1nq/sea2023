@@ -9,7 +9,7 @@ import pydantic
 import process_model
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 
 open_models: dict[str, process_model.ProcessModel] = {}
@@ -91,6 +91,7 @@ def create_node() -> flask.Response:
             return flask.make_response("", 404)
         case model:
             node = model.add_node(node_type, x, y)
+            logging.info(f"Created node {node}")
             return jsonify(node)
 
 
@@ -98,7 +99,7 @@ def create_node() -> flask.Response:
 def delete_node() -> flask.Response:
     global open_models
 
-    node_id = process_model.NodeId(int(request.form["node_id"]))
+    node_id = request.form.get("node_id", type=int)
 
     match get_model(request.form["model_id"]):
         case None:
@@ -113,7 +114,7 @@ def move_node() -> flask.Response:
     global open_models
 
     path = request.form["model_id"]
-    node_id = process_model.NodeId(float(request.form["node_id"]))
+    node_id = request.form.get("node_id", type=int)
     x = float(request.form["x"])
     y = float(request.form["y"])
 
@@ -122,7 +123,7 @@ def move_node() -> flask.Response:
             return flask.make_response("", 404)
         case model:
             model.move_node(node_id, x, y)
-            return flask.make_response("", 204)
+            return flask.make_response("", 200)
 
 
 @app.route("/connect", methods=["POST"])
@@ -130,8 +131,8 @@ def connect() -> flask.Response:
     global open_models
 
     path = request.form["model_id"]
-    start_node_id = process_model.NodeId(float(request.form["start_node_id"]))
-    end_node_id = process_model.NodeId(float(request.form["end_node_id"]))
+    start_node_id = request.form.get("start_node_id", type=int)
+    end_node_id = request.form.get("end_node_id", type=int)
 
     match get_model(path):
         case None:
@@ -178,6 +179,19 @@ def clear() -> flask.Response:
         case model:
             model.clear()
             return flask.make_response("", 204)
+
+
+@app.route("/save", methods=["POST"])
+def save() -> flask.Response:
+    global open_models
+
+    model_id = request.form["model_id"]
+    match get_model(model_id):
+        case None:
+            return flask.make_response("", 404)
+        case model:
+            model.save(model_id)
+            return flask.make_response("", 200)
 
 
 @app.route("/favicon.ico", methods=["GET"])

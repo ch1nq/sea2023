@@ -4,6 +4,7 @@ let offset_y = 0;
 let global_offset_x = 0;
 let global_offset_y = 0;
 let global_zoom = 1;
+let changesMade = false;
 const nodeSize = 50;
 
 enum State {
@@ -13,6 +14,7 @@ enum State {
     Connect = "connect",
     Delete = "delete",
     Clear = "clear",
+    Save = "save",
 }
 
 enum MoveState {
@@ -22,7 +24,7 @@ enum MoveState {
 }
 
 type GraphNodeId = {
-    id: string;
+    id: number;
 };
 
 type Position = {
@@ -63,6 +65,7 @@ const state_buttons = {
     [State.Connect]: document.getElementById('btn-connect')!,
     [State.Delete]: document.getElementById('btn-delete')!,
     [State.Clear]: document.getElementById('btn-clear')!,
+    [State.Save]: document.getElementById('btn-save')!,
 };
 
 var canvas = document.getElementById("canvas");
@@ -70,6 +73,15 @@ if (!canvas || !(canvas instanceof SVGSVGElement)) {
     throw new Error("canvas not found");
 }
 
+function madeChange() {
+    changesMade = true;
+    document.getElementById("btn-save")!.classList.remove("disabled");
+}
+
+function resetChanges() {
+    changesMade = false;
+    document.getElementById("btn-save")!.classList.add("disabled");
+}
 
 function changeState(newState: State) {
     state = newState;
@@ -187,6 +199,7 @@ function moveEnd(_event: MouseEvent) {
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
         xhr.send(`model_id=${model_id}&node_id=${node_id}&x=${x}&y=${y}`);
         selected_node = null;
+        madeChange();
     }
     moveState = MoveState.None;
 }
@@ -211,13 +224,25 @@ function connectClick(event: MouseEvent) {
     if (selected_node && selected_node !== node) {
         var start_node_id = selected_node.getAttribute("data-id");
         var end_node_id = node.getAttribute("data-id");
+        let start_pos = {
+            x: parseInt(selected_node!.getAttribute("x")!),
+            y: parseInt(selected_node!.getAttribute("y")!)
+        };
+        let end_pos = {
+            x: parseInt(node.getAttribute("x")!),
+            y: parseInt(node.getAttribute("y")!)
+        };
+
         var xhr = new XMLHttpRequest();
         xhr.open("POST", "/connect");
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
         xhr.onreadystatechange = () => {
             if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                 var edge = JSON.parse(xhr.responseText);
-                addEdgeToCanvas(edge);
+                edge.start_position = start_pos;
+                edge.end_position = end_pos;
+                addEdgeToCanvas(edge as Edge);
+                madeChange();
             }
         };
         xhr.send(`model_id=${model_id}&start_node_id=${start_node_id}&end_node_id=${end_node_id}`);
@@ -240,6 +265,7 @@ function createClick(event: MouseEvent, new_node_type: NodeType) {
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
             var node = JSON.parse(xhr.responseText);
             addNodeToCanvas(node);
+            madeChange();
         }
     };
     xhr.send(`model_id=${model_id}&x=${point.x}&y=${point.y}&node_type=${node_type}`);
@@ -264,6 +290,7 @@ function deleteClick(event: MouseEvent) {
     xhr.onreadystatechange = () => {
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
             removeNodeFromCanvas(node_id!);
+            madeChange();
         }
     };
     xhr.send(`model_id=${model_id}&node_id=${node_id}`);
@@ -296,8 +323,8 @@ function addEdgeToCanvas(edge: Edge) {
     line.setAttribute("y1", start_y.toString());
     line.setAttribute("x2", end_x.toString());
     line.setAttribute("y2", end_y.toString());
-    line.setAttribute("data-start-node-id", edge.start_node_id.id);
-    line.setAttribute("data-end-node-id", edge.end_node_id.id);
+    line.setAttribute("data-start-node-id", edge.start_node_id.toString());
+    line.setAttribute("data-end-node-id", edge.end_node_id.toString());
 
     edges.appendChild(line);
 }
@@ -319,20 +346,20 @@ function addNodeToCanvas(node: GraphNode) {
 
     var node_group = document.createElementNS("http://www.w3.org/2000/svg", "g");
     node_group.setAttribute("class", "node-group");
-    node_group.setAttribute("data-id", node.id.id);
+    node_group.setAttribute("data-id", node.id.toString());
 
     var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     rect.setAttribute("class", `node node-${node.node_type.toLowerCase()}`);
     rect.setAttribute("x", (node.position.x).toString());
     rect.setAttribute("y", (node.position.y).toString());
-    rect.setAttribute("data-id", node.id.id);
+    rect.setAttribute("data-id", node.id.toString());
 
     var text = document.createElementNS("http://www.w3.org/2000/svg", "text");
     text.setAttribute("class", "node-text");
     text.setAttribute("x", (node.position.x).toString());
     text.setAttribute("y", (node.position.y).toString());
-    text.setAttribute("data-id", node.id.id);
-    text.textContent = node.id.id;
+    text.setAttribute("data-id", node.id.toString());
+    text.textContent = node.id.toString();
 
     node_group.appendChild(rect);
     node_group.appendChild(text);
@@ -374,8 +401,8 @@ function updateEdges() {
         let { start_x, start_y, end_x, end_y } = computeEdgeOffsetPosition({
             start_position: start_position,
             end_position: end_position,
-            end_node_id: { id: start_node_id! },
-            start_node_id: { id: end_node_id! }
+            end_node_id: { id: parseInt(end_node_id!) },
+            start_node_id: { id: parseInt(end_node_id!) }
         });
 
         edges[i].setAttribute("x1", (start_x).toString());
@@ -385,37 +412,44 @@ function updateEdges() {
     }
 }
 
-function renderNodes() {
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", `/nodes?model_id=${model_id}`);
-    xhr.onreadystatechange = () => {
-        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-            var nodes = JSON.parse(xhr.responseText);
+
+function renderNodesAndEdges() {
+
+    var xhr_edges = new XMLHttpRequest();
+    xhr_edges.open("GET", `/edges?model_id=${model_id}`);
+    xhr_edges.onreadystatechange = () => {
+        if (xhr_edges.readyState === XMLHttpRequest.DONE && xhr_edges.status === 200) {
+            var edges = JSON.parse(xhr_edges.responseText);
+            for (var edge of edges) {
+                edge.start_position = { x: 0, y: 0 };
+                edge.end_position = { x: 0, y: 0 };
+                addEdgeToCanvas(edge as Edge);
+            }
+            updateEdges();
+        }
+    };
+
+    var xhr_nodes = new XMLHttpRequest();
+    xhr_nodes.open("GET", `/nodes?model_id=${model_id}`);
+    xhr_nodes.onreadystatechange = () => {
+        if (xhr_nodes.readyState === XMLHttpRequest.DONE && xhr_nodes.status === 200) {
+            var nodes = JSON.parse(xhr_nodes.responseText);
             for (var node of nodes) {
                 addNodeToCanvas(node);
             }
+            xhr_edges.send();
         }
     };
-    xhr.send();
-}
 
-function renderEdges() {
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", `/edges?model_id=${model_id}`);
-    xhr.onreadystatechange = () => {
-        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-            var edges = JSON.parse(xhr.responseText);
-            for (var edge of edges) {
-                addEdgeToCanvas(edge);
-            }
-        }
-    };
-    xhr.send();
+
+    xhr_nodes.send();
+
 }
 
 function clearAll() {
     var xhr = new XMLHttpRequest();
     xhr.open("POST", "/clear");
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
     xhr.onreadystatechange = () => {
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
             var nodes = document.getElementById("nodes");
@@ -428,6 +462,22 @@ function clearAll() {
             while (edges.firstChild) {
                 edges.removeChild(edges.firstChild);
             }
+            madeChange();
+        }
+    };
+    xhr.send(`model_id=${model_id}`);
+}
+
+function save() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/save");
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            var alert = document.getElementById("save-success-alert")!;
+            alert.classList.add("show");
+            setTimeout(() => { alert.classList.remove("show") }, 2000);
+            resetChanges();
         }
     };
     xhr.send(`model_id=${model_id}`);
@@ -488,6 +538,6 @@ state_buttons.create_transition.addEventListener("click", () => { toggleState(St
 state_buttons.connect.addEventListener("click", () => { toggleState(State.Connect) });
 state_buttons.delete.addEventListener("click", () => { toggleState(State.Delete) });
 state_buttons.clear.addEventListener("click", () => { clearAll() });
+state_buttons.save.addEventListener("click", () => { save() });
 
-renderNodes();
-renderEdges();
+renderNodesAndEdges();

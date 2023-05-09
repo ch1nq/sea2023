@@ -315,7 +315,7 @@ function addEdgeToCanvas(edge: Edge) {
     marker.appendChild(path);
     edges.appendChild(marker);
 
-    let { start_x, start_y, end_x, end_y } = computeEdgeOffsetPosition(edge);
+    let { start_x, start_y, end_x, end_y } = computeEdgeOffsetPosition(edge, NodeType.Place, NodeType.Place);
 
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("class", "edge");
@@ -329,14 +329,20 @@ function addEdgeToCanvas(edge: Edge) {
     edges.appendChild(line);
 }
 
-
-function computeEdgeOffsetPosition(edge: Edge) {
+function computeEdgeOffsetPosition(edge: Edge, start_node_type: NodeType, end_node_type: NodeType) {
     const angle = Math.atan2(edge.end_position.y - edge.start_position.y, edge.end_position.x - edge.start_position.x);
     const end_offset = nodeSize / 2 + 5;
-    const start_x = edge.start_position.x + end_offset * Math.cos(angle);
-    const start_y = edge.start_position.y + end_offset * Math.sin(angle);
-    const end_x = edge.end_position.x - end_offset * Math.cos(angle);
-    const end_y = edge.end_position.y - end_offset * Math.sin(angle);
+    const adjacent = end_offset / Math.abs(Math.cos(angle));
+    const opposite = end_offset / Math.abs(Math.sin(angle));
+    const side = Math.min(adjacent, opposite);
+    const square_offset = { x: side * Math.cos(angle), y: side * Math.sin(angle) };
+    const circle_offset = { x: end_offset * Math.cos(angle), y: end_offset * Math.sin(angle) };
+    const { x: start_offset_x, y: start_offset_y } = start_node_type === NodeType.Place ? circle_offset : square_offset;
+    const { x: end_offset_x, y: end_offset_y } = end_node_type === NodeType.Place ? circle_offset : square_offset;
+    const start_x = edge.start_position.x + start_offset_x;
+    const start_y = edge.start_position.y + start_offset_y;
+    const end_x = edge.end_position.x - end_offset_x;
+    const end_y = edge.end_position.y - end_offset_y;
     return { start_x, start_y, end_x, end_y };
 }
 
@@ -398,12 +404,16 @@ function updateEdges() {
         let start_position = { x: Number(start_node?.getAttribute("x")), y: Number(start_node?.getAttribute("y")) };
         let end_position = { x: Number(end_node?.getAttribute("x")), y: Number(end_node?.getAttribute("y")) };
 
-        let { start_x, start_y, end_x, end_y } = computeEdgeOffsetPosition({
-            start_position: start_position,
-            end_position: end_position,
-            end_node_id: { id: parseInt(end_node_id!) },
-            start_node_id: { id: parseInt(end_node_id!) }
-        });
+        let { start_x, start_y, end_x, end_y } = computeEdgeOffsetPosition(
+            {
+                start_position: start_position,
+                end_position: end_position,
+                end_node_id: { id: parseInt(end_node_id!) },
+                start_node_id: { id: parseInt(end_node_id!) }
+            },
+            start_node?.classList.contains("node-place") ? NodeType.Place : NodeType.Transition,
+            end_node?.classList.contains("node-place") ? NodeType.Place : NodeType.Transition,
+        );
 
         edges[i].setAttribute("x1", (start_x).toString());
         edges[i].setAttribute("y1", (start_y).toString());

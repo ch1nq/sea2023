@@ -1,0 +1,31 @@
+<!DOCTYPE html lang="en">
+<html>
+
+{% include('boilerplate/head.html') %}
+
+<body>
+    <div class="h-25"></div>
+    <div class="d-flex flex-column gap-5 align-items-center">
+        <div class="text-center">
+            <h1>Hello, welcome back</h1>
+            <p class="lead">Select a model to edit or create a new one.</p>
+        </div>
+        <div class="d-flex gap-2 ">
+            {% with btn_size='large' %}
+            <button type="button" class="btn btn-primary btn" id="btn-open-model" data-bs-toggle="modal"
+                data-bs-target="#openModelModal">
+                <i class="bi bi-folder-fill"></i>
+                Open Model
+            </button>
+            {% include('new_model_button.html') %}
+            {% endwith %}
+        </div>
+    </div>
+
+    {% include('modals/new_model_modal.html') %}
+    {% include('modals/open_model_modal.html') %}
+
+    {% include('boilerplate/scripts.html') %}
+</body>
+
+</html>

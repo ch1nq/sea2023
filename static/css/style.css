@@ -15,6 +15,16 @@
 
 body {
     height: 100%;
+    overflow: hidden;
+}
+
+.dir-content::before {
+    width: 0.5em;
+    content: "";
+    transform: translate(-0.5em, 0.75em);
+    top: 0;
+    position: absolute;
+    border-top: 1px solid var(--bs-gray-400);
 }
 
 .no-select {
@@ -28,7 +38,7 @@ body {
     /* height: 100vh; */
 }
 
-i.no-transition.collapsing {
+.no-transition.collapsing {
     display: none;
 }
 
@@ -38,6 +48,13 @@ i.no-transition.collapsing {
     width: var(--node-size);
     height: var(--node-size);
     transform: translate(calc(-0.5 * var(--node-size)), calc(-0.5 * var(--node-size)));
+}
+
+.node.selected {
+    stroke: var(--node-highlight-color);
+    stroke-width: calc(2 * var(--edge-thickness));
+    fill: var(--node-highlight-color);
+    fill-opacity: 0.2;
 }
 
 .node-transition {

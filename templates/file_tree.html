@@ -1,9 +1,9 @@
 {% macro render_tree(tree, path) %}
 {% set prefix = path.replace(" ", "_").replace("/", "_") %}
-<ul id="collapse-{{ prefix }}" class="ps-3 collapse show collapse-{{ prefix }}">
+<ul id="collapse-{{ prefix }}" class="ms-2 ps-2 border-start  collapse show collapse-{{ prefix }}">
     {% for key, value in tree.items() %}
     {% set id = (prefix + "_" if prefix else "") + key.replace(" ", "_") %}
-    <li class="list-group-item">
+    <li class="list-group-item dir-content">
         {% if value is mapping %}
         <span class="d-block" data-bs-toggle="collapse" data-bs-target=".collapse-{{ id }}" href="#collapse-{{ id }}"
             role="button" aria-controls="collapse-{{ id }} collapse-{{ id }}_caret" aria-expanded="true">
@@ -17,10 +17,10 @@
         <a role="button" href="{{ url_for('edit_model', model_id=path+'/'+key) }}"
             class="mb-1 icon-link link-dark link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-75-hover">
             {% if current_model_id == path+'/'+key %}
-            <i class="bi bi-file-earmark-fill mb-2"></i>
+            <i class="bi bi-file-earmark-fill"></i>
             <strong>{{ key }}</strong>
             {% else %}
-            <i class="bi bi-file-earmark mb-2"></i>
+            <i class="bi bi-file-earmark"></i>
             {{ key }}
             {% endif %}
         </a>

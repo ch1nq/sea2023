@@ -37,10 +37,11 @@ enum NodeType {
     Transition = "transition",
 }
 
-type GraphNode = {
+type PatriNetNode = {
     id: GraphNodeId;
     node_type: NodeType;
     position: Position;
+    ball_count: number;
 };
 
 
@@ -68,9 +69,15 @@ const state_buttons = {
     [State.Save]: document.getElementById('btn-save')!,
 };
 
-var canvas = document.getElementById("canvas");
+let canvas = document.getElementById("canvas");
 if (!canvas || !(canvas instanceof SVGSVGElement)) {
     throw new Error("canvas not found");
+}
+
+let settings_panel = document.getElementById("settings-panel");
+let settings_panel_content = document.getElementById("settings-panel-content");
+if (!settings_panel || !settings_panel_content) {
+    throw new Error("settings panel not found");
 }
 
 function madeChange() {
@@ -85,7 +92,7 @@ function resetChanges() {
 
 function changeState(newState: State) {
     state = newState;
-    selected_node = null;
+    selectNode(null);
 }
 
 function toggleState(newState: State) {
@@ -126,14 +133,37 @@ function screenToGraphCoords(x: number, y: number): SVGPoint {
     return transformCoords(x, y, true)
 }
 
+function populateNodeSettings(node_id: GraphNodeId) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", `/node_settings?model_id=${model_id}&node_id=${node_id.id}`);
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            settings_panel_content!.innerHTML = xhr.responseText;
+        }
+    };
+    xhr.send();
+}
+
+function selectNode(node: SVGRectElement | null) {
+    if (selected_node) {
+        selected_node.classList.remove("selected");
+    }
+    selected_node = node;
+    if (!selected_node) {
+        return;
+    }
+    selected_node.classList.add("selected");
+    settings_panel?.classList.add("show");
+    populateNodeSettings({ id: parseInt(selected_node.getAttribute("data-id")!) });
+}
 
 function moveStart(event: MouseEvent) {
     if (event.target instanceof SVGRectElement) {
-        selected_node = event.target;
+        selectNode(event.target);
     } else if (event.target instanceof SVGTextElement) {
-        selected_node = event.target.previousElementSibling as SVGRectElement;
+        selectNode(event.target.previousElementSibling as SVGRectElement);
     } else if (event.target instanceof SVGSVGElement) {
-        selected_node = null;
+        selectNode(null);
         offset_x = event.clientX;
         offset_y = event.clientY;
         moveState = MoveState.MovingGraph;
@@ -142,8 +172,8 @@ function moveStart(event: MouseEvent) {
         return;
     }
     const point = graphToScreenCoords(
-        parseInt(selected_node.getAttribute("x")!),
-        parseInt(selected_node.getAttribute("y")!)
+        parseInt(selected_node!.getAttribute("x")!),
+        parseInt(selected_node!.getAttribute("y")!)
     );
     offset_x = event.clientX - point.x;
     offset_y = event.clientY - point.y;
@@ -198,7 +228,7 @@ function moveEnd(_event: MouseEvent) {
         xhr.open("POST", "/move");
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
         xhr.send(`model_id=${model_id}&node_id=${node_id}&x=${x}&y=${y}`);
-        selected_node = null;
+        // selectNode(null);
         madeChange();
     }
     moveState = MoveState.None;
@@ -222,8 +252,10 @@ function connectClick(event: MouseEvent) {
     }
 
     if (selected_node && selected_node !== node) {
-        var start_node_id = selected_node.getAttribute("data-id");
-        var end_node_id = node.getAttribute("data-id");
+        let start_node_id = selected_node.getAttribute("data-id");
+        let end_node_id = node.getAttribute("data-id");
+        let start_node_type = selected_node.classList.contains("node-place") ? NodeType.Place : NodeType.Transition;
+        let end_node_type = node.classList.contains("node-place") ? NodeType.Place : NodeType.Transition;
         let start_pos = {
             x: parseInt(selected_node!.getAttribute("x")!),
             y: parseInt(selected_node!.getAttribute("y")!)
@@ -241,15 +273,15 @@ function connectClick(event: MouseEvent) {
                 var edge = JSON.parse(xhr.responseText);
                 edge.start_position = start_pos;
                 edge.end_position = end_pos;
-                addEdgeToCanvas(edge as Edge);
+                addEdgeToCanvas(edge as Edge, start_node_type, end_node_type);
                 madeChange();
             }
         };
         xhr.send(`model_id=${model_id}&start_node_id=${start_node_id}&end_node_id=${end_node_id}`);
 
-        selected_node = null;
+        selectNode(null);
     } else {
-        selected_node = node;
+        selectNode(node);
     }
 
 }
@@ -296,7 +328,7 @@ function deleteClick(event: MouseEvent) {
     xhr.send(`model_id=${model_id}&node_id=${node_id}`);
 }
 
-function addEdgeToCanvas(edge: Edge) {
+function addEdgeToCanvas(edge: Edge, start_node_type: NodeType, end_node_type: NodeType) {
     const edges = document.getElementById("edges");
     if (!edges) throw new Error("edges not found");
 
@@ -315,7 +347,7 @@ function addEdgeToCanvas(edge: Edge) {
     marker.appendChild(path);
     edges.appendChild(marker);
 
-    let { start_x, start_y, end_x, end_y } = computeEdgeOffsetPosition(edge, NodeType.Place, NodeType.Place);
+    let { start_x, start_y, end_x, end_y } = computeEdgeOffsetPosition(edge, start_node_type, end_node_type);
 
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("class", "edge");
@@ -346,7 +378,7 @@ function computeEdgeOffsetPosition(edge: Edge, start_node_type: NodeType, end_no
     return { start_x, start_y, end_x, end_y };
 }
 
-function addNodeToCanvas(node: GraphNode) {
+function addNodeToCanvas(node: PatriNetNode) {
     var nodes = document.getElementById("nodes");
     if (!nodes) throw new Error("nodes not found");
 
@@ -365,7 +397,7 @@ function addNodeToCanvas(node: GraphNode) {
     text.setAttribute("x", (node.position.x).toString());
     text.setAttribute("y", (node.position.y).toString());
     text.setAttribute("data-id", node.id.toString());
-    text.textContent = node.id.toString();
+    text.textContent = node.ball_count.toString();
 
     node_group.appendChild(rect);
     node_group.appendChild(text);
@@ -433,7 +465,7 @@ function renderNodesAndEdges() {
             for (var edge of edges) {
                 edge.start_position = { x: 0, y: 0 };
                 edge.end_position = { x: 0, y: 0 };
-                addEdgeToCanvas(edge as Edge);
+                addEdgeToCanvas(edge as Edge, NodeType.Place, NodeType.Place);
             }
             updateEdges();
         }
@@ -450,10 +482,9 @@ function renderNodesAndEdges() {
             xhr_edges.send();
         }
     };
-
-
+    document.getElementById("nodes")!.innerHTML = "";
+    document.getElementById("edges")!.innerHTML = "";
     xhr_nodes.send();
-
 }
 
 function clearAll() {
@@ -541,6 +572,24 @@ canvas.addEventListener("mouseleave", (event: MouseEvent) => {
     }
 });
 canvas.addEventListener("wheel", (event: WheelEvent) => { handleScroll(event) });
+document.getElementById("update-node-settings")?.addEventListener("click", () => {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/node_settings");
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            renderNodesAndEdges();
+        }
+    };
+    let formData = new FormData(document.getElementById("node-settings-form") as HTMLFormElement);
+    let encodedFormData = new URLSearchParams();
+
+    for (const pair of formData) {
+        encodedFormData.append(pair[0], (pair[1] as string));
+    }
+    xhr.send(encodedFormData.toString());
+});
+
 
 state_buttons.create_place.addEventListener("click", () => { toggleState(State.CreatePlace) });
 state_buttons.create_transition.addEventListener("click", () => { toggleState(State.CreateTransition) });
@@ -548,6 +597,5 @@ state_buttons.connect.addEventListener("click", () => { toggleState(State.Connec
 state_buttons.delete.addEventListener("click", () => { toggleState(State.Delete) });
 state_buttons.clear.addEventListener("click", () => { clearAll() });
 state_buttons.save.addEventListener("click", () => { save() });
-
 
 renderNodesAndEdges();

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+
+{% include('boilerplate/head.html') %}
+
+<body>
+    <div class="d-flex flex-column vh-100">
+        <div class="d-flex flex-row flex-grow-1">
+            {% include('sidebar.html') %}
+            <div class="d-flex flex-column flex-fill position-relative">
+                {% include('editor_toolbar.html') %}
+                <div class="position-relative h-100">
+                    {% include('canvas.html') %}
+                    {% include('node_settings_panel.html') %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include('modals/clear_modal.html') %}
+    {% include('modals/new_model_modal.html') %}
+    {% include('modals/todo_modal.html') %}
+    {% include('modals/new_simulation_modal.html') %}
+    {% include('modals/save_preset_modal.html') %}
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% include('boilerplate/scripts.html') %}
+</body>
+
+</html>

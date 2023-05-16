@@ -8,55 +8,58 @@
             </div>
             <form action="/queue_simulation" method="post">
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label for="preset-select">Load Preset:</label>
-                        <select class="form-control" id="preset-select" name="preset">
-                            <option value="">None</option>
-                            {% for preset in presets %}
-                            <option value="{{ preset }}">{{ preset }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <hr>
-                    <div class="form-group">
-                        <label for="num_runs">Number of simulation runs:</label>
-                        <input type="number" class="form-control" id="num_runs" name="num_runs" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="time_limit">Simulation time limit:</label>
-                        <input type="number" class="form-control" id="time_limit" name="time_limit" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="initial_marking">Initial marking/state (for petri nets):</label>
-                        <textarea class="form-control" id="initial_marking" name="initial_marking"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="input_values">Input values for the model (e.g. tokens, data, events):</label>
-                        <textarea class="form-control" id="input_values" name="input_values"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="output_values">Output values to monitor (e.g. tokens, data, events):</label>
-                        <textarea class="form-control" id="output_values" name="output_values"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="firing_strategy">Transition firing strategies (e.g. random, prioritized):</label>
-                        <select class="form-control" id="firing_strategy" name="firing_strategy">
-                            <option value="random">Random</option>
-                            <option value="prioritized">Prioritized</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="logging_level">Logging level (e.g. debug, info, error):</label>
-                        <select class="form-control" id="logging_level" name="logging_level">
-                            <option value="debug">Debug</option>
-                            <option value="info">Info</option>
-                            <option value="error">Error</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="parallelization_options">Parallelization options:</label>
-                        <input type="number" class="form-control" id="parallelization_options"
-                            name="parallelization_options">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="preset-select">Load Preset:</label>
+                            <select class="form-control" id="preset-select" name="preset">
+                                <option value="">None</option>
+                                {% for preset in presets %}
+                                <option value="{{ preset }}">{{ preset }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <hr>
+                        <div class="form-group">
+                            <label for="num_runs">Number of simulation runs:</label>
+                            <input type="number" class="form-control" id="num_runs" name="num_runs" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="time_limit">Simulation time limit:</label>
+                            <input type="number" class="form-control" id="time_limit" name="time_limit" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="initial_marking">Initial marking/state (for petri nets):</label>
+                            <textarea class="form-control" id="initial_marking" name="initial_marking"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="input_values">Input values for the model (e.g. tokens, data, events):</label>
+                            <textarea class="form-control" id="input_values" name="input_values"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="output_values">Output values to monitor (e.g. tokens, data, events):</label>
+                            <textarea class="form-control" id="output_values" name="output_values"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="firing_strategy">Transition firing strategies (e.g. random,
+                                prioritized):</label>
+                            <select class="form-control" id="firing_strategy" name="firing_strategy">
+                                <option value="random">Random</option>
+                                <option value="prioritized">Prioritized</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="logging_level">Logging level (e.g. debug, info, error):</label>
+                            <select class="form-control" id="logging_level" name="logging_level">
+                                <option value="debug">Debug</option>
+                                <option value="info">Info</option>
+                                <option value="error">Error</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="parallelization_options">Parallelization options:</label>
+                            <input type="number" class="form-control" id="parallelization_options"
+                                name="parallelization_options">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -2,7 +2,7 @@
 
 ## Install
 ```bash
-pip install flask 
+pip install flask pydantic
 npm install -g typescript
 ```
 

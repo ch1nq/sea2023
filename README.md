@@ -4,6 +4,7 @@
 ```bash
 pip install flask pydantic ngrok
 brew install typescript
+mkdir models
 ```
 
 ## Run locally 

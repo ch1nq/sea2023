@@ -3,7 +3,7 @@
 ## Install
 ```bash
 pip install flask pydantic
-npm install -g typescript
+brew install typescript
 ```
 
 ## Run locally 

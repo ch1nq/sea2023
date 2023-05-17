@@ -2,7 +2,7 @@
 
 ## Install
 ```bash
-pip install flask pydantic
+pip install flask pydantic ngrok
 brew install typescript
 ```
 

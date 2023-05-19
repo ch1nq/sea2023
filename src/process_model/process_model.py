@@ -1,5 +1,5 @@
 import abc
-import os
+import pathlib
 import random
 from typing import Generic, NewType, TypeVar
 
@@ -73,16 +73,15 @@ class ProcessModel(ProcessModelBase, pydantic.generics.GenericModel, Generic[Nod
     ) -> bool:
         ...
 
-    def save(self, path: os.PathLike) -> None:
+    def save(self, path: pathlib.Path) -> None:
         """Save the process model to a file."""
         with open(path, "w") as f:
             f.write(self.copy(update={"edges": list(self.edges)}).json())
 
     @classmethod
-    def load(cls, path: os.PathLike) -> "ProcessModel":
+    def load(cls, path: pathlib.Path) -> "ProcessModel":
         """Load a process model from a file."""
-        with open(path, "r") as f:
-            return cls.parse_raw(f.read())
+        return cls.parse_file(path)
 
     def new_node_id(self) -> NodeId:
         id = random.randint(0, self.MAX_NODES)

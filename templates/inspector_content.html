@@ -1,0 +1,31 @@
+<form id="node-inspector-form">
+    <div class="d-flex flex-column gap-3 overflow-scroll">
+        <input type="text" class="form-control" name="node_id" value="{{ node_id }}" hidden>
+        <input type="text" class="form-control" name="model_id" value="{{ model_id }}" hidden>
+        {% for property in properties %}
+        <div class="form-group">
+            <label for="{{ property.name }}" class="form-label form-text">{{ property.label
+                }}:</label>
+            {% if property.inspector_type == "text" %}
+            <input type="text" class="form-control" name="{{ property.name }}" placeholder="{{ property.name }}"
+                value="{{ property.value }}">
+            {% elif property.inspector_type == "number" %}
+            <input type="number" class="form-control" name="{{ property.name }}" placeholder="{{ property.name }}"
+                value="{{ property.value }}">
+            {% elif property.inspector_type == "select" %}
+            <select class="form-select" name="{{ property.name }}">
+                {% for option_label, option_value in property.options %}
+                <option value="{{ option_value }}" {% if option_value==property.value %}selected{% endif %}>
+                    {{ option_label }}
+                </option>
+                {% endfor %}
+            </select>
+            {% elif property.inspector_type == "checkbox" %}
+            <input type="checkbox" class="form-check-input" name="{{ property.name }}">
+            {% elif property.inspector_type == "info" %}
+            <p class="mb-0">{{ property.value }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</form>

@@ -27,6 +27,15 @@ body {
     border-top: 1px solid var(--bs-gray-400);
 }
 
+.file-tree-link {
+    color: var(--bs-gray-800);
+    text-decoration: none;
+}
+
+.file-tree-link:hover {
+    color: var(--bs-gray-600);
+}
+
 .no-select {
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -79,6 +88,7 @@ body {
 
 .node-group:hover {
     fill: var(--color-medium);
+    cursor: pointer;
 }
 
 .node-selected {
@@ -86,6 +96,7 @@ body {
 }
 
 .edge {
+    fill: var(--edge-color);
     stroke: var(--edge-color);
     stroke-width: var(--edge-thickness);
     marker-end: url(#arrow);

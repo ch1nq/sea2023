@@ -1,6 +1,5 @@
 import enum
 
-import pydantic.dataclasses
 from src import process_model as pm
 
 
@@ -9,26 +8,28 @@ class NodeType(str, enum.Enum):
     TRANSITION = "transition"
 
 
-# @pydantic.dataclasses.dataclass
 class PetriNetNode(pm.Node):
+    name: str
     node_type: NodeType
     ball_count: int = 0
+    accepting_state: str = ""
+    hehe69420: str = "1337"
 
-class PetriNet(pm.ProcessModel[PetriNetNode, pm.Edge]):
+
+class PetriNetEdge(pm.Edge):
+    ball_count: int = 0
+
+
+class PetriNet(pm.ProcessModel[PetriNetNode, PetriNetEdge]):
     model_type = pm.ProcessModelType.PETRI_NET
 
-    def __init__(self, **kwargs):
-        super().__init__(edge_class=pm.Edge, **kwargs)
+    def node_factory(self, node_id: pm.NodeId, position: pm.Point, node_type: NodeType) -> PetriNetNode:
+        return PetriNetNode(id=node_id, position=position, node_type=node_type, name=f"Node#{node_id}")
 
-    def _create_node(
-        self, node_id: pm.NodeId, position: pm.Point, node_type: NodeType
-    ) -> PetriNetNode:
-        return PetriNetNode(id=node_id, position=position, node_type=node_type)
+    def edge_factory(self, *args, **kwargs) -> PetriNetEdge:
+        return PetriNetEdge(*args, **kwargs)
 
-    def _create_edge(self, *args, **kwargs) -> pm.Edge:
-        return pm.Edge(*args, **kwargs)
-
-    def is_valid_edge(self, edge: pm.Edge) -> bool:
+    def is_valid_edge(self, edge: PetriNetEdge) -> bool:
         """
         Check if an edge can be added to the PetriNet.
 

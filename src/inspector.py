@@ -13,6 +13,7 @@ class InspectableField(pydantic.generics.GenericModel, Generic[FieldType], abc.A
     name: str
     value: FieldType
     inspector_type: str | None = None
+    mutable: bool = True
 
     @property
     def label(self):
@@ -30,10 +31,12 @@ class TextInspectableField(InspectableField[str]):
 
 class HiddenInspectableField(InspectableField[FieldType]):
     inspector_type: None = None
+    mutable: bool = False
 
 
 class InfoInspectableField(InspectableField[Any]):
     inspector_type = "info"
+    mutable: bool = False
 
 
 class NumberInspectableField(InspectableField[int | float]):
@@ -57,21 +60,12 @@ class InspectorMixin:
     @property
     def inspectables(self) -> dict[str, InspectableField]:
         field_types = self.field_types()
-        excluded_fields = [
-            field_name
-            for field_name, field in field_types.items()
-            if field is HiddenInspectableField
-        ]
+        excluded_fields = [field_name for field_name, field in field_types.items() if field is HiddenInspectableField]
         inspectables = dict()
         for field in self.__fields__.values():
             if field.name not in excluded_fields:
-                print(field.name, field_types.get(field.name))
-                factory = field_types.get(
-                    field.name, self.default_field_factory(field.type_)
-                )
-                inspectables[field.name] = factory(
-                    name=field.name, value=getattr(self, field.name)
-                )
+                factory = field_types.get(field.name, self.default_field_factory(field.type_))
+                inspectables[field.name] = factory(name=field.name, value=getattr(self, field.name))
         return inspectables
 
     @property
@@ -92,5 +86,7 @@ class InspectorMixin:
         return self.inspectables.values()
 
     def set_inspectable(self, name: str, value: Any) -> None:
-        value = self.inspectables[name].set_value(value)
-        self.__setattr__(name, value)
+        inspectable = self.inspectables[name]
+        if inspectable.mutable:
+            value = self.inspectables[name].set_value(value)
+            self.__setattr__(name, value)

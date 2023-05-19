@@ -74,10 +74,10 @@ if (!canvas || !(canvas instanceof SVGSVGElement)) {
     throw new Error("canvas not found");
 }
 
-let settings_panel = document.getElementById("settings-panel");
-let settings_panel_content = document.getElementById("settings-panel-content");
-if (!settings_panel || !settings_panel_content) {
-    throw new Error("settings panel not found");
+let inspector_panel = document.getElementById("inspector-panel");
+let inspector_panel_content = document.getElementById("inspector-panel-content");
+if (!inspector_panel || !inspector_panel_content) {
+    throw new Error("inspector panel not found");
 }
 
 function madeChange() {
@@ -133,12 +133,12 @@ function screenToGraphCoords(x: number, y: number): SVGPoint {
     return transformCoords(x, y, true)
 }
 
-function populateNodeSettings(node_id: GraphNodeId) {
+function populateNodeInspector(node_id: GraphNodeId) {
     var xhr = new XMLHttpRequest();
-    xhr.open("GET", `/node_settings?model_id=${model_id}&node_id=${node_id.id}`);
+    xhr.open("GET", `/inspect?model_id=${model_id}&node_id=${node_id.id}`);
     xhr.onreadystatechange = () => {
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-            settings_panel_content!.innerHTML = xhr.responseText;
+            inspector_panel_content!.innerHTML = xhr.responseText;
         }
     };
     xhr.send();
@@ -150,11 +150,12 @@ function selectNode(node: SVGRectElement | null) {
     }
     selected_node = node;
     if (!selected_node) {
+        inspector_panel?.classList.remove("show");
         return;
     }
     selected_node.classList.add("selected");
-    settings_panel?.classList.add("show");
-    populateNodeSettings({ id: parseInt(selected_node.getAttribute("data-id")!) });
+    inspector_panel?.classList.add("show");
+    populateNodeInspector({ id: parseInt(selected_node.getAttribute("data-id")!) });
 }
 
 function moveStart(event: MouseEvent) {
@@ -228,9 +229,9 @@ function moveEnd(_event: MouseEvent) {
         xhr.open("POST", "/move");
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
         xhr.send(`model_id=${model_id}&node_id=${node_id}&x=${x}&y=${y}`);
-        // selectNode(null);
         madeChange();
     }
+    selectNode(selected_node);
     moveState = MoveState.None;
 }
 
@@ -333,7 +334,8 @@ function addEdgeToCanvas(edge: Edge, start_node_type: NodeType, end_node_type: N
     if (!edges) throw new Error("edges not found");
 
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-    marker.setAttribute("id", "arrow");
+    marker.classList.add("edge");
+    marker.setAttribute("id", `arrow`);
     marker.setAttribute("markerWidth", "10");
     marker.setAttribute("markerHeight", "10");
     marker.setAttribute("refX", "8");
@@ -341,8 +343,8 @@ function addEdgeToCanvas(edge: Edge, start_node_type: NodeType, end_node_type: N
     marker.setAttribute("orient", "auto-start-reverse");
 
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.classList.add("edge");
     path.setAttribute("d", "M 0 0 L 10 5 L 0 10 z");
-    path.setAttribute("fill", "black");
 
     marker.appendChild(path);
     edges.appendChild(marker);
@@ -456,7 +458,6 @@ function updateEdges() {
 
 
 function renderNodesAndEdges() {
-
     var xhr_edges = new XMLHttpRequest();
     xhr_edges.open("GET", `/edges?model_id=${model_id}`);
     xhr_edges.onreadystatechange = () => {
@@ -572,16 +573,16 @@ canvas.addEventListener("mouseleave", (event: MouseEvent) => {
     }
 });
 canvas.addEventListener("wheel", (event: WheelEvent) => { handleScroll(event) });
-document.getElementById("update-node-settings")?.addEventListener("click", () => {
+document.getElementById("update-node-properties")?.addEventListener("click", () => {
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "/node_settings");
+    xhr.open("POST", "/update_properties");
     xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
     xhr.onreadystatechange = () => {
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
             renderNodesAndEdges();
         }
     };
-    let formData = new FormData(document.getElementById("node-settings-form") as HTMLFormElement);
+    let formData = new FormData(document.getElementById("node-inspector-form") as HTMLFormElement);
     let encodedFormData = new URLSearchParams();
 
     for (const pair of formData) {

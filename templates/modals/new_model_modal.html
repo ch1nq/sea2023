@@ -9,16 +9,17 @@
             <form action="/new_model" method="post">
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="model_location">Model Location</label>
+                        <label for="model_location">Model path</label>
                         <input type="text" class="form-control" id="model_id" name="model_id"
-                            placeholder="Enter a model location">
+                            placeholder="path/to/model.pm">
                     </div>
                     <div class="form-group">
                         <label for="model_type">Model Type</label>
                         <select class="form-select" id="model_type" name="model_type"
                             aria-label="Default select example" required>
-                            <option value="petri_net">Petri Net</option>
-                            <option value="dcr_graph">DCR Graph</option>
+                            {% for name, value in model_types %}
+                            <option value="{{ value }}">{{ name }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>

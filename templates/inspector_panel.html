@@ -1,27 +1,28 @@
-<div class="border-start position-absolute bg-white no-transition collapse h-100" style="right: 0;" id="settings-panel">
+<div class="border-start position-absolute bg-white no-transition collapse h-100 shadow-sm" style="right: 0;"
+    id="inspector-panel">
     <div class="p-3 d-flex flex-column justify-content-between h-100
     " style="width: 20em">
         <div class="modal-header pb-2 border-bottom">
             <h1 class="modal-title fs-5" id="clearModalLabel">
                 <i class="bi bi-gear-fill text-secondary"></i>
-                Node Settings
+                Node Inspector
             </h1>
-            <button type="button" class="btn-close" data-bs-toggle="collapse" data-bs-target="#settings-panel"
-                aria-expanded="false" aria-controls="settings-panel" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-toggle="collapse" data-bs-target="#inspector-panel"
+                aria-expanded="false" aria-controls="inspector-panel" aria-label="Close"></button>
         </div>
-        <div class="overflow-scroll flex-fill pt-2" id="settings-panel-content">
-            {% if not node_settings %}
+        <div class="overflow-scroll flex-fill pt-2" id="inspector-panel-content">
+            {% if not properties %}
             <div class="m-auto mt-5">
                 <div class="spinner-border text-secondary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
             {% else %}
-            {% include('node_settings_content.html') %}
+            {% include('inspector_content.html') %}
             {% endif %}
         </div>
         <div class="pt-3 border-top">
-            <button type="button" class="btn btn-sm btn-primary w-100" id="update-node-settings">
+            <button type="button" class="btn btn-sm btn-primary w-100" id="update-node-properties">
                 <i class="bi bi-arrow-repeat"></i>
                 Update node
             </button>

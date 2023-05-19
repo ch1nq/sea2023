@@ -1,15 +1,19 @@
-import json
 import logging
 import os
 
 import flask
 
 from flask import Flask, jsonify, render_template, request
-import pydantic
 from src import process_model
+from src import ui
+
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 open_models: dict[str, process_model.ProcessModel] = {}
+
+
+def get_model_type(path: os.PathLike) -> process_model.ProcessModelType:
+    return process_model.ProcessModelBase.parse_file(str(path)).model_type
 
 
 def get_file_tree(root_dir: os.PathLike) -> dict[str, dict[str, bool]]:
@@ -23,7 +27,8 @@ def get_file_tree(root_dir: os.PathLike) -> dict[str, dict[str, bool]]:
             current_level = current_level[dir]
         for file in files:
             if file.endswith(".pm"):
-                current_level[file] = True
+                model_type = get_model_type(os.path.join(root, file))
+                current_level[file] = model_type.name.replace("_", " ").capitalize()
     return file_tree
 
 
@@ -32,19 +37,16 @@ def get_model(path: os.PathLike | None) -> process_model.ProcessModel:
     global open_models
 
     if path is None:
-        return None
+        raise ValueError("Path is None")
 
     with open(path, "r") as f:
-        model_type = process_model.ProcessModelType(json.load(f)["model_type"])
+        model_type = get_model_type(path)
         model_class = process_model.model_type_to_class(model_type)
 
     try:
         model = open_models.get(path, model_class.load(path))
     except FileNotFoundError as error:
         logging.error(f"File not found {path}")
-        raise error
-    except pydantic.error_wrappers.ValidationError as error:
-        logging.error(f"Invalid model file {path}")
         raise error
 
     return model
@@ -54,13 +56,10 @@ def get_model(path: os.PathLike | None) -> process_model.ProcessModel:
 def new_model() -> flask.Response:
     global open_models
 
-    model_id = request.form["model_id"]
-
-    match process_model.ProcessModelType(request.form["model_type"]):
-        case process_model.ProcessModelType.PETRI_NET:
-            model = process_model.PetriNet(id=model_id)
-        case _:
-            raise NotImplementedError("DCR Graphs are not yet implemented")
+    model_id = "models/" + request.form["model_id"]
+    model_type = process_model.ProcessModelType(request.form["model_type"])
+    model_factory = process_model.model_type_to_class(model_type)
+    model = model_factory(id=model_id)
 
     model.save(model_id)
     open_models[model_id] = model
@@ -74,6 +73,9 @@ def index() -> flask.Response:
         render_template(
             "pages/welcome_page.html",
             file_tree=get_file_tree("models"),
+            model_types=[
+                (model_type.name.replace("_", " "), model_type.value) for model_type in process_model.ProcessModelType
+            ],
         )
     )
 
@@ -82,7 +84,7 @@ def index() -> flask.Response:
 def edit_model() -> flask.Response:
     global open_models
 
-    model_id = request.args.get("model_id", None)
+    model_id = request.args["model_id"]
     model = get_model(model_id)
     open_models[model_id] = model
     return flask.make_response(
@@ -92,7 +94,12 @@ def edit_model() -> flask.Response:
             edges=model.get_edges(),
             file_tree=get_file_tree("models"),
             current_model_id=model_id,
-            node_settings=[],
+            properties=[],
+            model_type=model.model_type.name.replace("_", " "),
+            toolbar_buttons=ui.get_toolbar_buttons(model.model_type),
+            model_types=[
+                (model_type.name.replace("_", " "), model_type.value) for model_type in process_model.ProcessModelType
+            ],
         )
     )
 
@@ -203,24 +210,24 @@ def save() -> flask.Response:
     return flask.make_response("", 200)
 
 
-@app.route("/node_settings", methods=["GET"])
-def get_node_settings() -> flask.Response:
+@app.route("/inspect", methods=["GET"])
+def inspector_content() -> flask.Response:
     model_id = request.args.get("model_id")
     model = get_model(model_id)
     node_id = request.args.get("node_id", type=int)
     node = model.get_node(node_id)
     return flask.make_response(
         render_template(
-            "node_settings_content.html",
-            node_settings=node.get_inspectables(),
+            "inspector_content.html",
+            properties=node.get_inspectables(),
             node_id=node_id,
             model_id=model_id,
         )
     )
 
 
-@app.route("/node_settings", methods=["POST"])
-def set_node_settings() -> flask.Response:
+@app.route("/update_properties", methods=["POST"])
+def update_properties() -> flask.Response:
     model = get_model(request.form["model_id"])
     node_id = request.form.get("node_id", type=int)
 
@@ -240,6 +247,4 @@ def favicon() -> flask.Response:
 @app.errorhandler(404)
 def page_not_found(error: Exception | None = None) -> flask.Response:
     print(error)
-    return flask.make_response(
-        flask.render_template("pages/404.html", error=error), 404
-    )
+    return flask.make_response(flask.render_template("pages/404_page.html", error=error), 404)

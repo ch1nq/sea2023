@@ -7,11 +7,11 @@
     <div class="d-flex flex-column vh-100">
         <div class="d-flex flex-row flex-grow-1">
             {% include('sidebar.html') %}
-            <div class="d-flex flex-column flex-fill position-relative">
+            <div class="d-flex flex-column flex-fill">
                 {% include('editor_toolbar.html') %}
                 <div class="position-relative h-100">
                     {% include('canvas.html') %}
-                    {% include('node_settings_panel.html') %}
+                    {% include('inspector_panel.html') %}
                 </div>
             </div>
         </div>

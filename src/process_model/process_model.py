@@ -1,5 +1,4 @@
 import abc
-import enum
 import os
 import random
 from typing import Generic, NewType, TypeVar
@@ -7,20 +6,14 @@ from typing import Generic, NewType, TypeVar
 import pydantic
 import pydantic.generics
 from src import inspector
-
-
-class ProcessModelType(str, enum.Enum):
-    PETRI_NET = "petri_net"
-    DCR_GRAPH = "dcr_graph"
-    FLOWCHART = "flowchart"
+from src import process_model
 
 
 NodeId = NewType("NodeId", int)
 EdgeId = NewType("EdgeId", tuple[NodeId, NodeId])
 
 
-@pydantic.dataclasses.dataclass(eq=True, order=True)
-class Point:
+class Point(pydantic.BaseModel):
     x: float
     y: float
 
@@ -52,23 +45,24 @@ NodeT = TypeVar("NodeT", bound=Node)
 EdgeT = TypeVar("EdgeT", bound=Edge)
 
 
-class ProcessModel(pydantic.generics.GenericModel, Generic[NodeT, EdgeT], abc.ABC):
+class ProcessModelBase(pydantic.BaseModel):
+    model_type: process_model.ProcessModelType
+
+
+class ProcessModel(ProcessModelBase, pydantic.generics.GenericModel, Generic[NodeT, EdgeT], abc.ABC):
     MAX_NODES = 10000
-    model_type: ProcessModelType
 
     id: str
     nodes: dict[NodeId, NodeT] = pydantic.Field(default_factory=dict)
     edges: set[EdgeT] = pydantic.Field(default_factory=set)
 
     @abc.abstractmethod
-    def _create_node(self, node_id: NodeId, position: Point, **kwargs) -> NodeT:
+    def node_factory(self, node_id: NodeId, position: Point, **kwargs) -> NodeT:
         """Node factory method."""
         ...
 
     @abc.abstractmethod
-    def _create_edge(
-        self, start_node_id: NodeId, end_node_id: NodeId, **kwargs
-    ) -> EdgeT:
+    def edge_factory(self, start_node_id: NodeId, end_node_id: NodeId, **kwargs) -> EdgeT:
         """Edge factory method."""
         ...
 
@@ -98,7 +92,7 @@ class ProcessModel(pydantic.generics.GenericModel, Generic[NodeT, EdgeT], abc.AB
 
     def add_node(self, x: float, y: float, **node_kwargs) -> NodeT:
         node_id = self.new_node_id()
-        node = self._create_node(node_id, Point(x, y), **node_kwargs)
+        node = self.node_factory(node_id, Point(x=x, y=y), **node_kwargs)
         self.nodes[node_id] = node
         return node
 
@@ -109,14 +103,10 @@ class ProcessModel(pydantic.generics.GenericModel, Generic[NodeT, EdgeT], abc.AB
             self.delete_edge(EdgeId((other_node, node_id)))
 
     def move_node(self, node_id: NodeId, x: float, y: float) -> None:
-        self.nodes[node_id].position = Point(x, y)
+        self.nodes[node_id].position = Point(x=x, y=y)
 
-    def add_edge(
-        self, start_node_id: NodeId, end_node_id: NodeId, **edge_kwargs
-    ) -> EdgeT | None:
-        edge = self._create_edge(
-            start_node_id=start_node_id, end_node_id=end_node_id, **edge_kwargs
-        )
+    def add_edge(self, start_node_id: NodeId, end_node_id: NodeId, **edge_kwargs) -> EdgeT | None:
+        edge = self.edge_factory(start_node_id=start_node_id, end_node_id=end_node_id, **edge_kwargs)
         if not self.is_valid_edge(edge):
             return None
         self.edges.add(edge)

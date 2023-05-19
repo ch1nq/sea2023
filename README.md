@@ -2,8 +2,9 @@
 
 ## Install
 ```bash
-pip install flask 
-npm install -g typescript
+pip install flask pydantic ngrok
+brew install typescript
+mkdir models
 ```
 
 ## Run locally 
@@ -13,5 +14,5 @@ python main.py
 ```
 in another terminal
 ```
-tsc --watch script.ts --outFile static/js/script.js
+tsc --watch script.ts --outFile static/js/script.js --target ES6
 ```

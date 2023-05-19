@@ -223,8 +223,8 @@ function move(event: MouseEvent) {
 function moveEnd(_event: MouseEvent) {
     if (moveState === MoveState.MovingNode) {
         var node_id = selected_node!.getAttribute("data-id")!;
-        var x = parseInt(selected_node!.getAttribute("x")!);
-        var y = parseInt(selected_node!.getAttribute("y")!);
+        var x = parseFloat(selected_node!.getAttribute("x")!);
+        var y = parseFloat(selected_node!.getAttribute("y")!);
         var xhr = new XMLHttpRequest();
         xhr.open("POST", "/move");
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");

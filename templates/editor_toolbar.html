@@ -1,5 +1,6 @@
 <div class="btn-toolbar gap-2 p-2 border-bottom align-items-center
 " role="toolbar">
+    <div class="flex-fill"></div>
     {% for button in toolbar_buttons %}
     <button type="button" class="btn btn-outline-{{ button.color }} btn-sm" id="btn-{{ button.id }}" {% for attr, value
         in button.attributes.items() %}{{ attr }}="{{ value }}" {% endfor %}>
@@ -8,13 +9,16 @@
     </button>
     {% endfor %}
     <div class="flex-fill"></div>
-    <div id="save-success-alert" class="fade mt-1" type="alert">
-        <i class="bi bi-check-circle-fill text-success mt-1" id="save-success"></i>
+    <div class="position-relative">
+        <div id="save-success-alert" class="fade mt-1 position-absolute start-0 pe-1"
+            style="transform: translateX(-100%)" type="alert">
+            <i class="bi bi-check-circle-fill text-success mt-1" id="save-success"></i>
+        </div>
+        <button type="button" class="btn btn-success btn-sm disabled" id="btn-save">
+            <i class="bi bi-save-fill"></i>
+            Save Changes
+        </button>
     </div>
-    <button type="button" class="btn btn-success btn-sm disabled" id="btn-save">
-        <i class="bi bi-save-fill"></i>
-        Save Changes
-    </button>
     <button type="button" class="btn btn-secondary
      btn-sm" id="btn-simulate" data-bs-toggle="modal" data-bs-target="#newSimulationModal">
         <i class="bi bi-database-fill-gear"></i>

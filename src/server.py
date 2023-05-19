@@ -118,8 +118,8 @@ def create_node() -> flask.Response:
     global open_models
 
     model_id = flask.request.form["model_id"]
-    x = float(flask.request.form["x"])
-    y = float(flask.request.form["y"])
+    x = flask.request.form.get("x", type=float)
+    y = flask.request.form.get("y", type=float)
     node_type = process_model.NodeType(flask.request.form["node_type"])
 
     model = get_model(model_id)
@@ -153,8 +153,8 @@ def move_node() -> flask.Response:
 
     path = flask.request.form["model_id"]
     node_id = flask.request.form.get("node_id", type=int)
-    x = float(flask.request.form["x"])
-    y = float(flask.request.form["y"])
+    x = flask.request.form.get("x", type=float)
+    y = flask.request.form.get("y", type=float)
 
     if node_id is None:
         raise ValueError("Node id is None")

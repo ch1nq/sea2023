@@ -7,9 +7,8 @@
     --scrollbar-height: 0px;
     --node-size: 50px;
     --node-text-size: 20px;
-    --node-highlight-color: var(--color-primary);
-    --edge-color: var(--color-dark);
-    --node-stroke-color: var(--color-dark);
+    --edge-color: var(--bs-dark-text-emphasis);
+    --node-stroke-color: var(--edge-color);
     --edge-thickness: 1px;
 }
 
@@ -28,7 +27,7 @@ body {
 }
 
 .file-tree-link {
-    color: var(--bs-gray-800);
+    color: var(--bs-dark-text-emphasis);
     text-decoration: none;
 }
 
@@ -43,8 +42,7 @@ body {
 }
 
 #canvas {
-    background-color: var(--bs-gray-100);
-    /* height: 100vh; */
+    background-color: var(--bs-light-bg-subtle);
 }
 
 .no-transition.collapsing {
@@ -60,10 +58,9 @@ body {
 }
 
 .node.selected {
-    stroke: var(--node-highlight-color);
+    stroke: var(--bs-primary);
     stroke-width: calc(2 * var(--edge-thickness));
-    fill: var(--node-highlight-color);
-    fill-opacity: 0.2;
+    fill: var(--bs-primary-bg-subtle);
 }
 
 .node-transition {
@@ -75,7 +72,7 @@ body {
 }
 
 .node-text {
-    fill: var(--color-dark);
+    fill: var(--node-stroke-color);
     font-size: var(--node-text-size);
     font-family: "Arial", sans-serif;
     text-anchor: middle;
@@ -83,16 +80,16 @@ body {
 }
 
 .node-group {
-    fill: var(--color-light);
+    fill: var(--bs-secondary-bg-subtle);
 }
 
 .node-group:hover {
-    fill: var(--color-medium);
+    fill: var(--bs-primary-bg-subtle);
     cursor: pointer;
 }
 
 .node-selected {
-    fill: var(--node-highlight-color);
+    fill: var(--bs-primary-bg-subtle);
 }
 
 .edge {

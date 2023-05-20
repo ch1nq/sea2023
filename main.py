@@ -10,4 +10,4 @@ logging.basicConfig(level=logging.DEBUG)
 if __name__ == "__main__":
     if os.environ.get("NGROK_AUTH_TOKEN"):
         tunnel = ngrok.werkzeug_develop()
-    src.server.app.run(debug=True)
+    src.server.app.run("0.0.0.0", debug=True)

@@ -27,4 +27,4 @@ COPY --from=builder /dist ./static/js
 # Create models directory
 RUN mkdir models 
 
-CMD [ "python3", "-m" , "gunicorn", "src.server:app", "-b=0.0.0.0:5000", "-w=4"]
+CMD [ "python3", "-m" , "gunicorn", "src.server:app", "-b=0.0.0.0:5000"]

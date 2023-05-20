@@ -1,11 +1,37 @@
 {% from "file_tree.html" import render_tree with context %}
 
-<div class="p-2 border-end vh-100 d-flex flex-column" style="width: 20em">
-    {% with btn_size='small' %}
-    {% include('new_model_button.html') %}
-    {% endwith %}
-    <hr>
-    <div class="overflow-x-scroll">
-        {{ render_tree(file_tree, "") }}
+<div class="collapse no-transition" id="sidebar">
+    <div class="p-2 gap-2 border-end h-100 d-flex flex-column shadow-sm position-absolute no-transition start-0 top-0  ui-layer"
+        style="width: 20em;">
+        <a type="button" class="btn btn-primary btn-sm" id="btn-new-model" data-bs-toggle="modal"
+            data-bs-target="#newModelModal">
+            <i class="bi bi-file-earmark-plus-fill"></i>
+            New model
+        </a>
+        <a type="button" class="btn btn-secondary btn-sm" id="btn-import-model" data-bs-toggle="modal"
+            data-bs-target="#todoModal">
+            <i class="bi bi-download"></i>
+            Import model
+        </a>
+        <a type="button" class="btn btn-secondary btn-sm" id="btn-export-model" data-bs-toggle="modal"
+            data-bs-target="#todoModal">
+            <i class="bi bi-folder-symlink-fill"></i>
+            Export model
+        </a>
+        <hr>
+        <a type="button" class="btn btn-secondary btn-sm" id="btn-share" data-bs-toggle="modal"
+            data-bs-target="#todoModal">
+            <i class="bi bi-share-fill"></i>
+            Share Model
+        </a>
+        <a type="button" class="btn btn-secondary
+     btn-sm" id="btn-simulate" data-bs-toggle="modal" data-bs-target="#newSimulationModal">
+            <i class="bi bi-database-fill-gear"></i>
+            Simulate
+        </a>
+        <hr>
+        <div class="overflow-x-scroll">
+            {{ render_tree(file_tree, "") }}
+        </div>
     </div>
 </div>

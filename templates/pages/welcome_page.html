@@ -11,14 +11,18 @@
             <p class="lead">Select a model to edit or create a new one.</p>
         </div>
         <div class="d-flex gap-2 ">
-            {% with btn_size='large' %}
+
             <button type="button" class="btn btn-primary btn shadow-sm" id="btn-open-model" data-bs-toggle="modal"
                 data-bs-target="#openModelModal">
                 <i class="bi bi-folder-fill"></i>
                 Open Model
             </button>
-            {% include('new_model_button.html') %}
-            {% endwith %}
+            <button type="button" class="btn btn-primary {% if btn_size == 'small' %}btn-sm{% endif %}"
+                id="btn-create-model" data-bs-toggle="modal" data-bs-target="#newModelModal">
+                <i class="bi bi-file-earmark-plus-fill"></i>
+                New Process Model
+            </button>
+
         </div>
     </div>
 

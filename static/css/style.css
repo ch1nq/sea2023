@@ -10,12 +10,19 @@
     --edge-color: var(--bs-dark-text-emphasis);
     --node-stroke-color: var(--edge-color);
     --edge-thickness: 1px;
+    --edge-thickness-selected: calc(2 * var(--edge-thickness));
 }
 
 body {
     height: 100%;
     overflow: hidden;
 }
+
+.ui-layer {
+    z-index: 2;
+    background: var(--bs-body-bg);
+}
+
 
 .dir-content::before {
     width: 0.5em;
@@ -32,7 +39,8 @@ body {
 }
 
 .file-tree-link:hover {
-    color: var(--bs-gray-600);
+    /* color: var(--bs-gray-600); */
+    background: var(--bs-primary-bg-subtle);
 }
 
 .no-select {
@@ -45,8 +53,10 @@ body {
     background-color: var(--bs-light-bg-subtle);
 }
 
-.no-transition.collapsing {
-    display: none;
+.no-transition {
+    /* display: none; */
+    transition-duration: 0s !important;
+
 }
 
 .node {
@@ -55,12 +65,6 @@ body {
     width: var(--node-size);
     height: var(--node-size);
     transform: translate(calc(-0.5 * var(--node-size)), calc(-0.5 * var(--node-size)));
-}
-
-.node.selected {
-    stroke: var(--bs-primary);
-    stroke-width: calc(2 * var(--edge-thickness));
-    fill: var(--bs-primary-bg-subtle);
 }
 
 .node-transition {
@@ -80,16 +84,19 @@ body {
 }
 
 .node-group {
+    --node-stroke-color: var(--bs-dark-text-emphasis);
     fill: var(--bs-secondary-bg-subtle);
+}
+
+.node-group.selected {
+    --node-stroke-color: var(--bs-primary);
+    --edge-thickness: var(--edge-thickness-selected);
+    fill: var(--bs-primary-bg-subtle);
 }
 
 .node-group:hover {
     fill: var(--bs-primary-bg-subtle);
     cursor: pointer;
-}
-
-.node-selected {
-    fill: var(--bs-primary-bg-subtle);
 }
 
 .edge {

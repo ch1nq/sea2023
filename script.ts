@@ -146,14 +146,14 @@ function populateNodeInspector(node_id: GraphNodeId) {
 
 function selectNode(node: SVGRectElement | null) {
     if (selected_node) {
-        selected_node.classList.remove("selected");
+        selected_node.parentElement?.classList.remove("selected");
     }
     selected_node = node;
     if (!selected_node) {
         inspector_panel?.classList.remove("show");
         return;
     }
-    selected_node.classList.add("selected");
+    selected_node.parentElement?.classList.add("selected");
     inspector_panel?.classList.add("show");
     populateNodeInspector({ id: parseInt(selected_node.getAttribute("data-id")!) });
 }
@@ -226,12 +226,19 @@ function moveEnd(_event: MouseEvent) {
         var x = parseFloat(selected_node!.getAttribute("x")!);
         var y = parseFloat(selected_node!.getAttribute("y")!);
         var xhr = new XMLHttpRequest();
+        const spinner = document.getElementById("inspector-panel-spinner")!;
+        spinner.classList.remove("d-none");
         xhr.open("POST", "/move");
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                spinner.classList.add("d-none");
+                selectNode(selected_node);
+            }
+        };
         xhr.send(`model_id=${model_id}&node_id=${node_id}&x=${x}&y=${y}`);
         madeChange();
     }
-    selectNode(selected_node);
     moveState = MoveState.None;
 }
 

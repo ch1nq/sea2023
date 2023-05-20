@@ -1,11 +1,10 @@
-FROM node as builder
+FROM node:16-alpine as builder
 
 # Install TypeScript
 RUN npm install -g typescript
 
 # Compile typescript
-WORKDIR /app
-COPY script.ts script.ts
+COPY script.ts .
 RUN tsc script.ts --outDir ./dist --target ES6
 
 FROM python:3.11-slim-buster
@@ -17,13 +16,13 @@ COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
 # Copy python source
-COPY src src
-COPY templates templates
 COPY static static
+COPY templates templates
+COPY src src
 
 # Copy compiled typescript
 RUN mkdir -p static/js
-COPY --from=builder /app/dist ./static/js
+COPY --from=builder /dist ./static/js
 
 # Create models directory
 RUN mkdir models 

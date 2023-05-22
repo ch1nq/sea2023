@@ -1,0 +1,12 @@
+<div class="list-group list-group-flush">
+    {% for simulation_queue_item in simulation_queue %}
+    <a class="list-group-item list-group-item-action d-flex flex-row justify-content-between align-items-center"
+        href="#">
+        <i class="bi bi-database-fill-gear text-secondary"></i>
+        <span class="ms-2 flex-fill">Simulation #{{ simulation_queue_item.label }}</span>
+        <span class="badge bg-{{ simulation_queue_item.color }} rounded-pill">
+            {{ simulation_queue_item.status }}
+        </span>
+    </a>
+    {% endfor %}
+</div>

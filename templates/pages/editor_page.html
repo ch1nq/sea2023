@@ -10,8 +10,8 @@
                 {% include('editor_toolbar.html') %}
                 <div class="position-relative h-100">
                     {% include('canvas.html') %}
-                    {% include('sidebar.html') %}
-                    {% include('inspector_panel.html') %}
+                    {% include('panels/sidebar_panel.html') %}
+                    {% include('panels/inspector_panel.html') %}
                 </div>
             </div>
         </div>
@@ -20,6 +20,7 @@
     {% include('modals/todo_modal.html') %}
     {% include('modals/clear_modal.html') %}
     {% include('modals/new_model_modal.html') %}
+    {% include('modals/open_model_modal.html') %}
     {% include('modals/new_simulation_modal.html') %}
     {% include('modals/save_preset_modal.html') %}
 

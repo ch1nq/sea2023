@@ -1,6 +1,5 @@
-import random
-
 import pydantic
+from src import simulation_engine
 from src import process_model as pm
 
 
@@ -48,3 +47,31 @@ def get_toolbar_buttons(model_type: pm.ProcessModelType) -> list[ToolbarButton]:
             ]
         case _:
             return []
+
+
+class SimulationQueueListItem(pydantic.BaseModel):
+    simulation: simulation_engine.Simulation
+    color: str
+    icon: str
+    status: str
+    label: str
+
+    @classmethod
+    def from_simulation(cls, simulation: simulation_engine.Simulation) -> "SimulationQueueListItem":
+        match simulation.status():
+            case simulation_engine.SimulationStatus.QUEUED:
+                color = "secondary"
+            case simulation_engine.SimulationStatus.RUNNING:
+                color = "info"
+            case simulation_engine.SimulationStatus.FINISHED:
+                color = "success"
+            case simulation_engine.SimulationStatus.FAILED:
+                color = "danger"
+
+        return cls(
+            simulation=simulation,
+            color=color,
+            icon="database-fill-gear",
+            status=simulation.status().name,  # type: ignore
+            label=str(simulation.id),
+        )

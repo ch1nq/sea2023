@@ -1,16 +1,30 @@
+import datetime
 import logging
 import os
 import pathlib
+import random
 
 import flask
 import flask.wrappers
 
 from src import process_model
 from src import ui
+from src import simulation_engine
 
 
 app = flask.Flask(__name__, template_folder="../templates", static_folder="../static")
 open_models: dict[str, process_model.ProcessModel] = {}
+simulator = simulation_engine.Simulator()
+
+for _ in range(10):
+    simulation = simulator.queue_simulation(
+        model_id=process_model.ModelId("models/petri_net_1"),
+        simulation_parameters=simulation_engine.SimulationParameters(),
+    )
+    if random.random() < 0.3:
+        simulation = simulator.start_simulation(simulation)
+        if random.random() < 0.5:
+            simulator.finish_simulation(simulation, simulation_engine.SimulationResult())
 
 
 def get_model_type(path: pathlib.Path) -> process_model.ProcessModelType:
@@ -60,7 +74,7 @@ def new_model() -> flask.Response:
     model_id = "models/" + flask.request.form["model_id"]
     model_type = process_model.ProcessModelType(flask.request.form["model_type"])
     model_factory = process_model.model_type_to_class(model_type)
-    model = model_factory(id=model_id, model_type=model_type)
+    model = model_factory(id=process_model.ModelId(model_id), model_type=model_type)
 
     model.save(pathlib.Path(model_id))
     open_models[model_id] = model
@@ -83,7 +97,7 @@ def index() -> flask.Response:
 
 @app.route("/edit", methods=["GET"])
 def edit_model() -> flask.Response:
-    global open_models
+    global open_models, simulation_queue
 
     model_id = flask.request.args["model_id"]
     model = get_model(model_id)
@@ -101,6 +115,10 @@ def edit_model() -> flask.Response:
             model_types=[
                 (model_type.name.replace("_", " "), model_type.value) for model_type in process_model.ProcessModelType
             ],
+            simulation_queue=map(
+                ui.SimulationQueueListItem.from_simulation,
+                simulator.finished_simulations + simulator.running_simulations + simulator.queued_simulations,
+            ),
         )
     )
 
@@ -259,6 +277,14 @@ def update_properties() -> flask.Response:
         if key in flask.request.form:
             node.set_inspectable(key, flask.request.form[key])
 
+    return flask.make_response("", 200)
+
+
+@app.route("/queue_simulation", methods=["POST"])
+def queue_simulation() -> flask.Response:
+    model_id = flask.request.form["model_id"]
+    model = get_model(model_id)
+    simulator.queue_simulation(process_model.ModelId(model.id), simulation_engine.SimulationParameters())
     return flask.make_response("", 200)
 
 

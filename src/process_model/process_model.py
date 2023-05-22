@@ -9,6 +9,7 @@ from src import inspector
 from src import process_model
 
 
+ModelId = NewType("ModelId", str)
 NodeId = NewType("NodeId", int)
 EdgeId = NewType("EdgeId", tuple[NodeId, NodeId])
 
@@ -52,7 +53,7 @@ class ProcessModelBase(pydantic.BaseModel):
 class ProcessModel(ProcessModelBase, pydantic.generics.GenericModel, Generic[NodeT, EdgeT], abc.ABC):
     MAX_NODES = 10000
 
-    id: str
+    id: ModelId
     nodes: dict[NodeId, NodeT] = pydantic.Field(default_factory=dict)
     edges: set[EdgeT] = pydantic.Field(default_factory=set)
 

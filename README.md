@@ -17,7 +17,7 @@ docker rm sea2023
 
 ## Develop
 ```bash
-pip install flask pydantic ngrok
+pip install -r requirements.txt
 brew install typescript
 mkdir models
 ```

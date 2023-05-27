@@ -3,32 +3,33 @@
 <div class="collapse no-transition" id="sidebar">
     <div class="p-2 gap-2 border-end h-100 d-flex flex-column shadow-sm position-absolute no-transition start-0 top-0 ui-layer"
         style="width: 20em;">
-        <a type="button" class="btn btn-primary btn-sm" id="btn-new-model" data-bs-toggle="modal"
-            data-bs-target="#newModelModal">
-            <i class="bi bi-file-earmark-plus-fill"></i>
-            New model
-        </a>
-        <a type="button" class="btn btn-secondary btn-sm" id="btn-import-model" data-bs-toggle="modal"
-            data-bs-target="#openModelModal">
-            <i class="bi bi-folder-fill"></i>
-            Open model
-        </a>
-        <hr>
-        <a type="button" class="btn btn-secondary btn-sm" id="btn-import-model" data-bs-toggle="modal"
-            data-bs-target="#todoModal">
-            <i class="bi bi-download"></i>
-            Import model
-        </a>
-        <a type="button" class="btn btn-secondary btn-sm" id="btn-export-model" data-bs-toggle="modal"
-            data-bs-target="#todoModal">
-            <i class="bi bi-folder-symlink-fill"></i>
-            Export model
-        </a>
-        <a type="button" class="btn btn-secondary btn-sm" id="btn-share" data-bs-toggle="modal"
-            data-bs-target="#todoModal">
-            <i class="bi bi-share-fill"></i>
-            Share Model
-        </a>
+        <div class="list-group list-group-flush">
+            <a type="button" class="list-group-item list-group-item-action" id="btn-new-model" data-bs-toggle="modal"
+                data-bs-target="#newModelModal">
+                <i class="text-secondary bi bi-file-earmark-plus-fill me-2"></i>
+                New model
+            </a>
+            <a type="button" class="list-group-item list-group-item-action" id="btn-import-model" data-bs-toggle="modal"
+                data-bs-target="#openModelModal">
+                <i class="text-secondary bi bi-folder-fill me-2"></i>
+                Open model
+            </a>
+            <a type="button" class="list-group-item list-group-item-action" id="btn-import-model" data-bs-toggle="modal"
+                data-bs-target="#todoModal">
+                <i class="text-secondary bi bi-download me-2"></i>
+                Import model
+            </a>
+            <a type="button" class="list-group-item list-group-item-action" id="btn-export-model" data-bs-toggle="modal"
+                data-bs-target="#todoModal">
+                <i class="text-secondary bi bi-folder-symlink-fill me-2"></i>
+                Export model
+            </a>
+            <a type="button" class="list-group-item list-group-item-action" id="btn-share" data-bs-toggle="modal"
+                data-bs-target="#todoModal">
+                <i class="text-secondary bi bi-share-fill me-2"></i>
+                Share Model
+            </a>
+        </div>
         <hr>
         <h6 class="text-muted">Simulation queue</h6>
         <div class="overflow-x-scroll flex-fill border-top border-bottom">

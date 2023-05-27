@@ -5,6 +5,7 @@ let global_offset_x = 0;
 let global_offset_y = 0;
 let global_zoom = 1;
 let changesMade = false;
+let moveStartPosition: Position | null = null;
 const nodeSize = 50;
 
 enum State {
@@ -15,6 +16,8 @@ enum State {
     Delete = "delete",
     Clear = "clear",
     Save = "save",
+    Undo = "undo",
+    Redo = "redo",
 }
 
 enum MoveState {
@@ -67,6 +70,8 @@ const state_buttons = {
     [State.Delete]: document.getElementById('btn-delete')!,
     [State.Clear]: document.getElementById('btn-clear')!,
     [State.Save]: document.getElementById('btn-save')!,
+    [State.Undo]: document.getElementById('btn-undo')!,
+    [State.Redo]: document.getElementById('btn-redo')!,
 };
 
 let canvas = document.getElementById("canvas");
@@ -82,12 +87,25 @@ if (!inspector_panel || !inspector_panel_content) {
 
 function madeChange() {
     changesMade = true;
-    document.getElementById("btn-save")!.classList.remove("disabled");
+    state_buttons[State.Save].classList.remove("disabled");
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", `/can_undo_redo?model_id=${model_id}`);
+    xhr.onreadystatechange = () => {
+        console.log(xhr.responseText);
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+
+            state_buttons[State.Undo].toggleAttribute("disabled", !response.can_undo);
+            state_buttons[State.Redo].toggleAttribute("disabled", !response.can_redo);
+        }
+    }
+    xhr.send();
 }
 
 function resetChanges() {
     changesMade = false;
-    document.getElementById("btn-save")!.classList.add("disabled");
+    state_buttons[State.Save].classList.add("disabled");
 }
 
 function changeState(newState: State) {
@@ -134,11 +152,14 @@ function screenToGraphCoords(x: number, y: number): SVGPoint {
 }
 
 function populateNodeInspector(node_id: GraphNodeId) {
+    const spinner = document.getElementById("inspector-panel-spinner")!;
+    spinner.classList.remove("d-none");
     var xhr = new XMLHttpRequest();
     xhr.open("GET", `/inspect?model_id=${model_id}&node_id=${node_id.id}`);
     xhr.onreadystatechange = () => {
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
             inspector_panel_content!.innerHTML = xhr.responseText;
+            spinner.classList.add("d-none");
         }
     };
     xhr.send();
@@ -172,12 +193,12 @@ function moveStart(event: MouseEvent) {
     } else {
         return;
     }
-    const point = graphToScreenCoords(
-        parseInt(selected_node!.getAttribute("x")!),
-        parseInt(selected_node!.getAttribute("y")!)
-    );
+    const x = parseInt(selected_node!.getAttribute("x")!)
+    const y = parseInt(selected_node!.getAttribute("y")!)
+    const point = graphToScreenCoords(x, y);
     offset_x = event.clientX - point.x;
     offset_y = event.clientY - point.y;
+    moveStartPosition = { x, y };
     moveState = MoveState.MovingNode;
 }
 
@@ -225,20 +246,22 @@ function moveEnd(_event: MouseEvent) {
         var node_id = selected_node!.getAttribute("data-id")!;
         var x = parseFloat(selected_node!.getAttribute("x")!);
         var y = parseFloat(selected_node!.getAttribute("y")!);
-        var xhr = new XMLHttpRequest();
-        const spinner = document.getElementById("inspector-panel-spinner")!;
-        spinner.classList.remove("d-none");
-        xhr.open("POST", "/move");
-        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                spinner.classList.add("d-none");
-                selectNode(selected_node);
-            }
-        };
-        xhr.send(`model_id=${model_id}&node_id=${node_id}&x=${x}&y=${y}`);
-        madeChange();
+
+        // Only update the node if it has moved
+        if (moveStartPosition!.x !== x || moveStartPosition!.y !== y) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/move");
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                    selectNode(selected_node);
+                    madeChange();
+                }
+            };
+            xhr.send(`model_id=${model_id}&node_id=${node_id}&x=${x}&y=${y}`);
+        }
     }
+    moveStartPosition = null;
     moveState = MoveState.None;
 }
 
@@ -532,6 +555,32 @@ function save() {
     xhr.send(`model_id=${model_id}`);
 }
 
+function undo() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/undo");
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            renderNodesAndEdges();
+            madeChange();
+        }
+    };
+    xhr.send(`model_id=${model_id}`);
+}
+
+function redo() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/redo");
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            renderNodesAndEdges();
+            madeChange();
+        }
+    };
+    xhr.send(`model_id=${model_id}`);
+}
+
 canvas.addEventListener("mousedown", (event: MouseEvent) => {
     switch (state) {
         case State.Move:
@@ -605,5 +654,7 @@ state_buttons.connect.addEventListener("click", () => { toggleState(State.Connec
 state_buttons.delete.addEventListener("click", () => { toggleState(State.Delete) });
 state_buttons.clear.addEventListener("click", () => { clearAll() });
 state_buttons.save.addEventListener("click", () => { save() });
+state_buttons.undo.addEventListener("click", () => { undo() });
+state_buttons.redo.addEventListener("click", () => { redo() });
 
 renderNodesAndEdges();

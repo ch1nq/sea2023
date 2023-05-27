@@ -7,13 +7,14 @@ import random
 import flask
 import flask.wrappers
 
+from src import editor
 from src import process_model
 from src import ui
 from src import simulation_engine
 
 
 app = flask.Flask(__name__, template_folder="../templates", static_folder="../static")
-open_models: dict[str, process_model.ProcessModel] = {}
+open_models: dict[str, editor.ProcessModelController] = {}
 simulator = simulation_engine.Simulator()
 
 for _ in range(10):
@@ -47,7 +48,7 @@ def get_file_tree(root_dir: pathlib.Path) -> dict[str, dict[str, bool]]:
     return file_tree
 
 
-def get_model(path: str | None) -> process_model.ProcessModel:
+def get_model_controller(path: str | None) -> editor.ProcessModelController:
     """Get mutable model from file."""
     global open_models
 
@@ -59,12 +60,12 @@ def get_model(path: str | None) -> process_model.ProcessModel:
         model_class = process_model.model_type_to_class(model_type)
 
     try:
-        model = open_models.get(path, model_class.load(pathlib.Path(path)))
+        model_controller = open_models.get(path, editor.ProcessModelController(model_class.load(pathlib.Path(path))))
     except FileNotFoundError as error:
         logging.error(f"File not found {path}")
         raise error
 
-    return model
+    return model_controller
 
 
 @app.route("/new_model", methods=["POST"])
@@ -100,8 +101,9 @@ def edit_model() -> flask.Response:
     global open_models, simulation_queue
 
     model_id = flask.request.args["model_id"]
-    model = get_model(model_id)
-    open_models[model_id] = model
+    model_controller = get_model_controller(model_id)
+    open_models[model_id] = model_controller
+    model = model_controller.model
     return flask.make_response(
         flask.render_template(
             "pages/editor_page.html",
@@ -127,8 +129,8 @@ def edit_model() -> flask.Response:
 def get_model_id() -> flask.Response:
     global open_models
 
-    model = get_model(flask.request.form["model_id"])
-    return flask.jsonify(model.id)
+    model_contoller = get_model_controller(flask.request.form["model_id"])
+    return flask.jsonify(model_contoller.model.id)
 
 
 @app.route("/create", methods=["POST"])
@@ -138,15 +140,15 @@ def create_node() -> flask.Response:
     model_id = flask.request.form["model_id"]
     x = flask.request.form.get("x", type=float)
     y = flask.request.form.get("y", type=float)
-    node_type = process_model.NodeType(flask.request.form["node_type"])
 
-    model = get_model(model_id)
-    match model.model_type:
+    model_controller = get_model_controller(model_id)
+    match model_controller.model.model_type:
         case process_model.ProcessModelType.PETRI_NET:
+            node_type = process_model.petri_net.NodeType(flask.request.form["node_type"])
             node_kwargs = dict(node_type=node_type)
         case _:
             node_kwargs = {}
-    node = model.add_node(x, y, **node_kwargs)
+    node: process_model.Node = model_controller.execute(editor.CreateNodeCommand(x=x, y=y, node_kwargs=node_kwargs))
     logging.info(f"Created node {node}")
     return flask.jsonify(node.dict())
 
@@ -160,8 +162,8 @@ def delete_node() -> flask.Response:
     if node_id is None:
         raise ValueError("Node id is None")
 
-    model = get_model(flask.request.form["model_id"])
-    model.delete_node(process_model.NodeId(node_id))
+    model_controller = get_model_controller(flask.request.form["model_id"])
+    model_controller.execute(editor.DeleteNodeCommand(node_id=process_model.NodeId(node_id)))
     return flask.make_response("", 200)
 
 
@@ -177,8 +179,8 @@ def move_node() -> flask.Response:
     if node_id is None:
         raise ValueError("Node id is None")
 
-    model = get_model(path)
-    model.move_node(process_model.NodeId(node_id), x, y)
+    model_controller = get_model_controller(path)
+    model_controller.execute(editor.MoveNodeCommand(node_id=process_model.NodeId(node_id), x=x, y=y))
     return flask.make_response("", 200)
 
 
@@ -193,8 +195,12 @@ def connect() -> flask.Response:
     if start_node_id is None or end_node_id is None:
         raise ValueError("Node id is None")
 
-    model = get_model(path)
-    edge = model.add_edge(process_model.NodeId(start_node_id), process_model.NodeId(end_node_id))
+    model_controller = get_model_controller(path)
+    edge = model_controller.execute(
+        editor.CreateEdgeCommand(
+            start_node_id=process_model.NodeId(start_node_id), end_node_id=process_model.NodeId(end_node_id)
+        )
+    )
     if edge is None:
         logging.info("Invalid connection")
         return flask.make_response("", 204)
@@ -207,24 +213,24 @@ def connect() -> flask.Response:
 def get_nodes() -> flask.Response:
     global open_models
 
-    model = get_model(flask.request.args.get("model_id"))
-    return flask.jsonify([node.dict() for node in model.get_nodes()])
+    model_controller = get_model_controller(flask.request.args.get("model_id"))
+    return flask.jsonify([node.dict() for node in model_controller.model.get_nodes()])
 
 
 @app.route("/edges", methods=["GET"])
 def get_edges() -> flask.Response:
     global open_models
 
-    model = get_model(flask.request.args.get("model_id"))
-    return flask.jsonify([edge.dict() for edge in model.get_edges()])
+    model_controller = get_model_controller(flask.request.args.get("model_id"))
+    return flask.jsonify([edge.dict() for edge in model_controller.model.get_edges()])
 
 
 @app.route("/clear", methods=["POST"])
 def clear() -> flask.Response:
     global open_models
 
-    model = get_model(flask.request.form["model_id"])
-    model.clear()
+    model_controller = get_model_controller(flask.request.form["model_id"])
+    model_controller.execute(editor.ClearModelCommand())
     return flask.make_response("", 200)
 
 
@@ -233,21 +239,21 @@ def save() -> flask.Response:
     global open_models
 
     model_id = flask.request.form["model_id"]
-    model = get_model(model_id)
-    model.save(pathlib.Path(model_id))
+    model_controller = get_model_controller(model_id)
+    model_controller.execute(editor.SaveModelCommand(path=pathlib.Path(model_id)))
     return flask.make_response("", 200)
 
 
 @app.route("/inspect", methods=["GET"])
 def inspector_content() -> flask.Response:
     model_id = flask.request.args.get("model_id")
-    model = get_model(model_id)
+    model_controller = get_model_controller(model_id)
 
     node_id = flask.request.args.get("node_id", type=int)
     if node_id is None:
         return flask.make_response("", 204)
 
-    node = model.get_node(process_model.NodeId(node_id))
+    node = model_controller.model.get_node(process_model.NodeId(node_id))
     if node is None:
         return flask.make_response("", 204)
 
@@ -263,28 +269,47 @@ def inspector_content() -> flask.Response:
 
 @app.route("/update_properties", methods=["POST"])
 def update_properties() -> flask.Response:
-    model = get_model(flask.request.form["model_id"])
-    node_id = flask.request.form.get("node_id", type=int)
+    model_controller = get_model_controller(flask.request.form["model_id"])
+    node_id = process_model.NodeId(flask.request.form.get("node_id", type=int))
 
-    if node_id is None:
+    if node_id is None or model_controller.model.get_node(process_model.NodeId(node_id)) is None:
         return flask.make_response("", 204)
+    else:
+        model_controller.execute(editor.UpdateInspectablesCommand(node_id=node_id, node_kwargs=flask.request.form))
+        return flask.make_response("", 200)
 
-    node = model.get_node(process_model.NodeId(node_id))
-    if not node:
-        return flask.make_response("", 204)
 
-    for key in [inspectable.name for inspectable in node.get_inspectables()]:
-        if key in flask.request.form:
-            node.set_inspectable(key, flask.request.form[key])
+@app.route("/undo", methods=["POST"])
+def undo() -> flask.Response:
+    model_controller = get_model_controller(flask.request.form["model_id"])
+    model_controller.undo()
+    can_undo = model_controller.history.can_undo
+    return flask.make_response(str(can_undo).lower(), 200)
 
-    return flask.make_response("", 200)
+
+@app.route("/redo", methods=["POST"])
+def redo() -> flask.Response:
+    model_controller = get_model_controller(flask.request.form["model_id"])
+    model_controller.redo()
+    can_redo = model_controller.history.can_redo
+    return flask.make_response(str(can_redo).lower(), 200)
+
+
+@app.route("/can_undo_redo", methods=["GET"])
+def can_undo_and_redo() -> flask.Response:
+    model_controller = get_model_controller(flask.request.args.get("model_id"))
+    can_undo = model_controller.history.can_undo
+    can_redo = model_controller.history.can_redo
+    return flask.jsonify({"can_undo": can_undo, "can_redo": can_redo})
 
 
 @app.route("/queue_simulation", methods=["POST"])
 def queue_simulation() -> flask.Response:
     model_id = flask.request.form["model_id"]
-    model = get_model(model_id)
-    simulator.queue_simulation(process_model.ModelId(model.id), simulation_engine.SimulationParameters())
+    model_controller = get_model_controller(model_id)
+    simulator.queue_simulation(
+        process_model.ModelId(model_controller.model.id), simulation_engine.SimulationParameters()
+    )
     return flask.make_response("", 200)
 
 

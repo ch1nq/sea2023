@@ -23,6 +23,8 @@ _TOOLBAR_BUTTONS = {
     ),
     "delete": ToolbarButton(id="delete", label="Delete", icon="eraser-fill"),
     "connect": ToolbarButton(id="connect", label="Edge", icon="arrow-left-right"),
+    "undo": ToolbarButton(id="undo", label="Undo", icon="arrow-counterclockwise", attributes={"disabled": "true"}),
+    "redo": ToolbarButton(id="redo", label="Redo", icon="arrow-clockwise", attributes={"disabled": "true"}),
 }
 
 
@@ -35,6 +37,8 @@ def get_toolbar_buttons(model_type: pm.ProcessModelType) -> list[ToolbarButton]:
                 _TOOLBAR_BUTTONS["connect"],
                 _TOOLBAR_BUTTONS["delete"],
                 _TOOLBAR_BUTTONS["clear"],
+                _TOOLBAR_BUTTONS["undo"],
+                _TOOLBAR_BUTTONS["redo"],
             ]
         case pm.ProcessModelType.DCR_GRAPH:
             return [
@@ -44,6 +48,8 @@ def get_toolbar_buttons(model_type: pm.ProcessModelType) -> list[ToolbarButton]:
                 _TOOLBAR_BUTTONS["connect"],
                 _TOOLBAR_BUTTONS["delete"],
                 _TOOLBAR_BUTTONS["clear"],
+                _TOOLBAR_BUTTONS["undo"],
+                _TOOLBAR_BUTTONS["redo"],
             ]
         case _:
             return []

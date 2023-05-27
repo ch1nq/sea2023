@@ -85,6 +85,9 @@ class InspectorMixin:
     def get_inspectables(self) -> list[InspectableField]:
         return self.inspectables.values()
 
+    def get_inspectable(self, name: str) -> InspectableField | None:
+        return self.inspectables.get(name)
+
     def set_inspectable(self, name: str, value: Any) -> None:
         inspectable = self.inspectables[name]
         if inspectable.mutable:

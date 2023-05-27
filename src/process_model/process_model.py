@@ -1,7 +1,7 @@
 import abc
 import pathlib
 import random
-from typing import Generic, NewType, TypeVar
+from typing import Generic, NewType, TypeVar, overload
 
 import pydantic
 import pydantic.generics
@@ -90,11 +90,16 @@ class ProcessModel(ProcessModelBase, pydantic.generics.GenericModel, Generic[Nod
             id = random.randint(0, self.MAX_NODES)
         return NodeId(id)
 
-    def add_node(self, x: float, y: float, **node_kwargs) -> NodeT:
+    def add_node(self, node: NodeT) -> NodeT:
+        if node.id in self.nodes.keys():
+            raise ValueError(f"Node with id {node.id} already exists.")
+        self.nodes[node.id] = node
+        return node
+
+    def add_node_from_values(self, x: float, y: float, **node_kwargs) -> NodeT:
         node_id = self.new_node_id()
         node = self.node_factory(node_id, Point(x=x, y=y), **node_kwargs)
-        self.nodes[node_id] = node
-        return node
+        return self.add_node(node)
 
     def delete_node(self, node_id: NodeId) -> None:
         self.nodes.pop(node_id)
@@ -105,12 +110,15 @@ class ProcessModel(ProcessModelBase, pydantic.generics.GenericModel, Generic[Nod
     def move_node(self, node_id: NodeId, x: float, y: float) -> None:
         self.nodes[node_id].position = Point(x=x, y=y)
 
-    def add_edge(self, start_node_id: NodeId, end_node_id: NodeId, **edge_kwargs) -> EdgeT | None:
-        edge = self.edge_factory(start_node_id=start_node_id, end_node_id=end_node_id, **edge_kwargs)
+    def add_edge(self, edge: EdgeT) -> EdgeT:
         if not self.is_valid_edge(edge):
             return None
         self.edges.add(edge)
         return edge
+
+    def add_edge_from_values(self, start_node_id: NodeId, end_node_id: NodeId, **edge_kwargs) -> EdgeT | None:
+        edge = self.edge_factory(start_node_id=start_node_id, end_node_id=end_node_id, **edge_kwargs)
+        return self.add_edge(edge)
 
     def delete_edge(self, edge_id: EdgeId) -> None:
         for edge in self.edges:

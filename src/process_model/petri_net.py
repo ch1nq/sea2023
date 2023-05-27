@@ -23,8 +23,8 @@ class PetriNetEdge(pm.Edge):
 class PetriNet(pm.ProcessModel[PetriNetNode, PetriNetEdge]):
     model_type = pm.ProcessModelType.PETRI_NET
 
-    def node_factory(self, node_id: pm.NodeId, position: pm.Point, node_type: NodeType) -> PetriNetNode:
-        return PetriNetNode(id=node_id, position=position, node_type=node_type, name=f"Node#{node_id}")
+    def node_factory(self, node_id: pm.NodeId, position: pm.Point, node_type: NodeType, **kwargs) -> PetriNetNode:
+        return PetriNetNode(id=node_id, position=position, node_type=node_type, name=f"Node#{node_id}", **kwargs)
 
     def edge_factory(self, *args, **kwargs) -> PetriNetEdge:
         return PetriNetEdge(*args, **kwargs)

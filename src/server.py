@@ -78,7 +78,7 @@ def new_model() -> flask.Response:
     model = model_factory(id=process_model.ModelId(model_id), model_type=model_type)
 
     model.save(pathlib.Path(model_id))
-    open_models[model_id] = model
+    open_models[model_id] = get_model_controller(model_id)
 
     return flask.redirect(f"/edit?model_id={model_id}")  # type: ignore
 

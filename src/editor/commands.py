@@ -112,28 +112,14 @@ class CreateEdgeCommand(ProcessModelCommand, UndoableCommand):
 
 class DeleteEdgeCommand(ProcessModelCommand, UndoableCommand):
     edge_id: process_model.EdgeId
-    edge: process_model.Edge | None = None
+    _edge: process_model.Edge = pydantic.PrivateAttr()
 
     def execute(self) -> None:
-        self.edge = self._model.get_edge(self.edge_id)
+        self._edge = self._model.get_edge(self.edge_id)
         self._model.delete_edge(self.edge_id)
 
     def undo(self) -> None:
-        self._model.add_edge(self.edge.start_node_id, self.edge.end_node_id, **self.edge.kwargs)
-
-
-class ChangeEdgeCommand(ProcessModelCommand, UndoableCommand):
-    edge_id: process_model.EdgeId
-    edge_kwargs: dict[str, Any] = pydantic.Field(default_factory=dict)
-    old_kwargs: dict[str, Any] | None = None
-
-    def execute(self) -> None:
-        edge = self._model.get_edge(self.edge_id)
-        self.old_kwargs = edge.kwargs
-        self._model.change_edge(self.edge_id, **self.edge_kwargs)
-
-    def undo(self) -> None:
-        self._model.change_edge(self.edge_id, **self.old_kwargs)
+        self._model.add_edge(self._edge)
 
 
 class UpdateInspectablesCommand(ProcessModelCommand, UndoableCommand):

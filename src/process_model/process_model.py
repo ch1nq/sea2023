@@ -74,10 +74,16 @@ class ProcessModel(ProcessModelBase, pydantic.generics.GenericModel, Generic[Nod
     ) -> bool:
         ...
 
+    def _serialize_to_dict(self) -> dict:
+        return self.copy(update={"edges": list(self.edges)}).dict()
+
+    def _serialize_to_str(self) -> str:
+        return self.copy(update={"edges": list(self.edges)}).json()
+
     def save(self, path: pathlib.Path) -> None:
         """Save the process model to a file."""
         with open(path, "w") as f:
-            f.write(self.copy(update={"edges": list(self.edges)}).json())
+            f.write(self._serialize_to_str())
 
     @classmethod
     def load(cls, path: pathlib.Path) -> "ProcessModel":

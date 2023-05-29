@@ -30,3 +30,9 @@ in another terminal
 ```
 tsc --watch script.ts --outFile static/js/script.js --target ES6
 ```
+
+## Test
+We use oytest for unit testing. To run tests
+```bash
+pytest
+```

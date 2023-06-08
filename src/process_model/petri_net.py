@@ -13,7 +13,6 @@ class PetriNetNode(pm.Node):
     node_type: NodeType
     ball_count: int = 0
     accepting_state: str = ""
-    hehe69420: str = "1337"
 
 
 class PetriNetEdge(pm.Edge):

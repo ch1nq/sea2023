@@ -1,13 +1,10 @@
 import logging
-import os
-
-import ngrok
-
 import src.server
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
-    if os.environ.get("NGROK_AUTH_TOKEN"):
-        tunnel = ngrok.werkzeug_develop()
-    src.server.app.run(debug=True)
+    app = src.server.app
+    # TODO: change to wss when using https
+    app.config["ws_url"] = "ws://localhost:8001"
+    app.run(debug=True)

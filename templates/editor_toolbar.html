@@ -18,8 +18,11 @@
         {{ button.label }}
     </button>
     {% endfor %}
-    </button>
-    <div class="flex-fill"></div>
+    <div class="flex-fill d-flex align-items-center justify-content-center gap-1">
+        <div class="badge text text-nowrap text-muted
+            ">Collaborators:</div>
+        <div id="collaborators" class="d-flex align-items-center justify-content-center gap-1"></div>
+    </div>
     <div class="position-relative">
         <div id="save-success-alert" class="fade mt-1 position-absolute start-0 pe-1"
             style="transform: translateX(-100%)" type="alert">

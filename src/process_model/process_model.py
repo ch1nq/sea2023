@@ -46,11 +46,7 @@ NodeT = TypeVar("NodeT", bound=Node)
 EdgeT = TypeVar("EdgeT", bound=Edge)
 
 
-class ProcessModelBase(pydantic.BaseModel):
-    model_type: process_model.ProcessModelType
-
-
-class ProcessModel(ProcessModelBase, pydantic.generics.GenericModel, Generic[NodeT, EdgeT], abc.ABC):
+class ProcessModel(process_model.ProcessModelBase, pydantic.generics.GenericModel, Generic[NodeT, EdgeT], abc.ABC):
     MAX_NODES = 10000
 
     id: ModelId

@@ -1,4 +1,10 @@
 import enum
+import pydantic
+import pathlib
+
+
+class ProcessModelBase(pydantic.BaseModel):
+    model_type: "ProcessModelType"
 
 
 class ProcessModelType(str, enum.Enum):
@@ -6,6 +12,12 @@ class ProcessModelType(str, enum.Enum):
     DCR_GRAPH = "dcr_graph"
     FLOWCHART = "flowchart"
 
+    @classmethod
+    def from_path(cls, path: pathlib.Path) -> "ProcessModelType":
+        return process_model.ProcessModelBase.parse_file(str(path)).model_type
+
+
+ProcessModelBase.update_forward_refs()
 
 from .process_model import *
 from .petri_net import *

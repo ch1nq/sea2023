@@ -11,6 +11,7 @@ from src import simulation_engine
 
 
 app = flask.Flask(__name__, template_folder="../templates", static_folder="../static")
+app.config.from_prefixed_env()
 simulator = simulation_engine.Simulator()
 
 for _ in range(10):
@@ -42,7 +43,7 @@ def get_file_tree(root_dir: pathlib.Path) -> dict[str, dict[str, bool]]:
 
 @app.route("/new_model", methods=["POST"])
 def new_model() -> flask.Response:
-    model_id = "models/" + flask.request.form["model_id"]
+    model_id = "data/models/" + flask.request.form["model_id"]
     model_type = process_model.ProcessModelType(flask.request.form["model_type"])
     model_factory = process_model.model_type_to_class(model_type)
     model = model_factory(id=process_model.ModelId(model_id), model_type=model_type)
@@ -56,7 +57,7 @@ def index() -> flask.Response:
     return flask.make_response(
         flask.render_template(
             "pages/welcome_page.html",
-            file_tree=get_file_tree(pathlib.Path("models")),
+            file_tree=get_file_tree(pathlib.Path("data/models")),
             model_types=[
                 (model_type.name.replace("_", " "), model_type.value) for model_type in process_model.ProcessModelType
             ],
@@ -74,7 +75,7 @@ def edit_model() -> flask.Response:
     return flask.make_response(
         flask.render_template(
             "pages/editor_page.html",
-            file_tree=get_file_tree(pathlib.Path("models")),
+            file_tree=get_file_tree(pathlib.Path("data/models")),
             current_model_id=model_id,
             model_type=model_type.name.replace("_", " "),
             toolbar_buttons=ui.get_toolbar_buttons(model_type),
@@ -96,9 +97,9 @@ def queue_simulation() -> flask.Response:
     return flask.make_response("", 200)
 
 
-@app.route("/ws_url", methods=["GET"])
-def ws_url() -> flask.Response:
-    return app.config["ws_url"]
+@app.route("/healthz", methods=["GET"])
+def healthz() -> flask.Response:
+    return flask.make_response("OK\n", 200)
 
 
 @app.route("/favicon.ico", methods=["GET"])

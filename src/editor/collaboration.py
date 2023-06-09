@@ -172,7 +172,7 @@ class EditorSession:
             self._collaborators.remove(websocket)
             self._spectators.remove(websocket)
             await self.update_collaborators()
-            await self.close_after_timeout(2)
+            await self.close_after_timeout(60)
 
     async def watch(self, websocket: websockets.server.WebSocketServerProtocol) -> None:
         self._spectators.add(websocket)
@@ -230,7 +230,13 @@ async def handler(websocket: websockets.server.WebSocketServerProtocol) -> None:
     Handle a connection and dispatch it according to who is connecting.
     """
     message = await websocket.recv()
-    request = Request.parse_raw(message).request
+    try:
+        request = Request.parse_raw(message).request
+    except pydantic.ValidationError as error:
+        logging.error(f"Invalid request: {message}")
+        logging.error(error)
+        await websocket.close(code=1003, reason="Invalid request")
+        return
 
     match request:
         case JoinSessionRequest() as join_request:

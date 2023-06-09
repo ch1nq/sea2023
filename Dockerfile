@@ -5,12 +5,18 @@ RUN npm install -g typescript
 
 # Compile typescript
 COPY script.ts .
-RUN tsc script.ts --outDir ./dist --target ES6
+RUN tsc script.ts --outDir ./dist --target ESNext 
 
 FROM python:3.11-slim-buster
 
+# Install and configure supervisor and NGINX
+RUN apt-get update && apt-get install -y supervisor nginx
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Configure NGINX
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Install python dependencies
-WORKDIR /python-docker
 RUN pip3 install pip --upgrade
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
@@ -19,13 +25,15 @@ RUN pip3 install -r requirements.txt
 COPY static static
 COPY templates templates
 COPY src src
+COPY main_ws.py .
 
 # Copy compiled typescript
 RUN mkdir -p static/js
 COPY --from=builder /dist ./static/js
 
 # Create models directory
-RUN mkdir models 
-COPY models models
+RUN mkdir data
+RUN mkdir data/models 
+COPY models data/models
 
-CMD [ "python3", "-m" , "gunicorn", "src.server:app", "-b=0.0.0.0:5000"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

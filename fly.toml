@@ -1,0 +1,30 @@
+app = "sea-2023"
+primary_region = "arn"
+kill_signal = "SIGTERM"
+
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 6000 # route to nginx
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  max_machines_running = 1
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+    force_https = true
+  
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.http_checks]]
+    restart_limit = 0
+    path = "/healthz"
+
+[[mounts]]
+  source = "data"
+  destination = "/data"

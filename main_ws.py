@@ -13,7 +13,7 @@ async def main():
     loop = asyncio.get_running_loop()
     stop = loop.create_future()
     loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
-    async with websockets.serve(src.editor.handler, "", 8001):
+    async with websockets.serve(src.editor.handler, "0.0.0.0", 8001):
         await stop
 
 

@@ -79,18 +79,6 @@ var model_id: string = (() => {
     const url = new URL(window.location.href);
     return url.searchParams.get("model_id")!;
 })();
-var websocket: Promise<WebSocket> = new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", "/ws_url");
-    xhr.onreadystatechange = () => {
-        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-            const ws_url = xhr.responseText;
-            const ws = new WebSocket(ws_url);
-            resolve(ws!);
-        }
-    };
-    xhr.send();
-});
 
 
 function madeChange() {
@@ -581,145 +569,153 @@ function updateCollaborators(collaborators: string[]) {
     };
     const collaborator_wrapper = document.getElementById("collaborators")!;
     collaborator_wrapper.innerHTML = "";
-    for (var collaborator of collaborators) {
-        const collaborator_icon = icon_factory(collaborator);
+
+    if (collaborators.length > 0) {
+        const collaborator_icon = icon_factory("You");
+        collaborator_icon.classList.remove("text-primary");
+        collaborator_icon.classList.add("text-secondary");
         collaborator_wrapper.appendChild(collaborator_icon);
+
+        for (var collaborator of collaborators) {
+            const collaborator_icon = icon_factory(collaborator);
+            collaborator_wrapper.appendChild(collaborator_icon);
+        }
+    } else {
+        collaborator_wrapper.innerHTML = "<div class='badge text-muted'>None</div>";
     }
 }
 
-websocket.then((ws) => {
-    ws.addEventListener("message", (event: MessageEvent) => {
-        const message = JSON.parse(event.data);
-        switch (message.event_type) {
-            case "update_model":
-                const nodes: Map<string, PetriNetNode> = new Map(Object.entries(message.model.nodes));
-                const edges: Edge[] = message.model.edges.map((edge: any) => {
-                    return {
-                        start_node_id: { id: edge.start_node_id },
-                        end_node_id: { id: edge.end_node_id },
-                        start_position: nodes.get(edge.start_node_id.toString())!.position,
-                        end_position: nodes.get(edge.end_node_id.toString())!.position,
-                    };
-                });
-                selectNode(selected_node, ws);
-                updateNodesAndEdges(nodes, edges);
-                madeChange();
-                break;
-            case "update_undo_redo":
-                state_buttons[State.Undo].toggleAttribute("disabled", !message.can_undo);
-                state_buttons[State.Redo].toggleAttribute("disabled", !message.can_redo);
-                break;
-            case "close_inspector":
-                selectNode(null, ws);
-                break;
-            case "saved_success":
-                console.log("saved success");
-
-                const alert = document.getElementById("save-success-alert")!;
-                alert.classList.add("show");
-                setTimeout(() => { alert.classList.remove("show") }, 2000);
-                resetChanges();
-                break;
-            case "update_inspector":
-                inspector_panel_content!.innerHTML = message.inspector_html;
-                document.getElementById("inspector-panel-spinner")!.classList.add("d-none");
-                break;
-            case "update_collaborators":
-                updateCollaborators(message.collaborator_ids);
-                break;
-        }
-    });
-    ws.addEventListener("open", () => {
-        ws!.send(JSON.stringify({
-            request: {
-                request_type: "join_session",
-                model_id: model_id,
-            }
-        }));
-    });
-    ws.addEventListener("close", () => {
-        document.getElementById('openDisconnedtedModalButton')!.click();
-    });
-
-
-    let canvas = document.getElementById("canvas");
-    if (!canvas || !(canvas instanceof SVGSVGElement)) {
-        throw new Error("canvas not found");
+const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+const port = window.location.port ? `:${window.location.port}` : "";
+const ws_url = `${scheme}://${window.location.hostname}${port}/ws`;
+const ws = new WebSocket(ws_url);
+ws.addEventListener("message", (event: MessageEvent) => {
+    const message = JSON.parse(event.data);
+    switch (message.event_type) {
+        case "update_model":
+            const nodes: Map<string, PetriNetNode> = new Map(Object.entries(message.model.nodes));
+            const edges: Edge[] = message.model.edges.map((edge: any) => {
+                return {
+                    start_node_id: { id: edge.start_node_id },
+                    end_node_id: { id: edge.end_node_id },
+                    start_position: nodes.get(edge.start_node_id.toString())!.position,
+                    end_position: nodes.get(edge.end_node_id.toString())!.position,
+                };
+            });
+            selectNode(selected_node, ws);
+            updateNodesAndEdges(nodes, edges);
+            madeChange();
+            break;
+        case "update_undo_redo":
+            state_buttons[State.Undo].toggleAttribute("disabled", !message.can_undo);
+            state_buttons[State.Redo].toggleAttribute("disabled", !message.can_redo);
+            break;
+        case "close_inspector":
+            selectNode(null, ws);
+            break;
+        case "saved_success":
+            const alert = document.getElementById("save-success-alert")!;
+            alert.classList.add("show");
+            setTimeout(() => { alert.classList.remove("show") }, 2000);
+            resetChanges();
+            break;
+        case "update_inspector":
+            inspector_panel_content!.innerHTML = message.inspector_html;
+            document.getElementById("inspector-panel-spinner")!.classList.add("d-none");
+            break;
+        case "update_collaborators":
+            updateCollaborators(message.collaborator_ids);
+            break;
     }
-
-    canvas.addEventListener("mousedown", (event: MouseEvent) => {
-        switch (state) {
-            case State.Move:
-                moveStart(event, ws);
-                break;
-            case State.CreatePlace:
-                createClick(event, NodeType.Place, ws);
-                break;
-            case State.CreateTransition:
-                createClick(event, NodeType.Transition, ws);
-                break;
-            case State.Connect:
-                connectClick(event, ws);
-                break;
-            case State.Delete:
-                deleteClick(event, ws);
-                break;
-        }
-    });
-    canvas.addEventListener("mousemove", (event: MouseEvent) => {
-        switch (state) {
-            case State.Move:
-                move(event);
-                break;
-            default:
-                break;
-        }
-    });
-    canvas.addEventListener("mouseup", (event: MouseEvent) => {
-        switch (state) {
-            case State.Move:
-                moveEnd(event, ws);
-                break;
-            default:
-                break;
-        }
-    }
-    );
-    canvas.addEventListener("mouseleave", (event: MouseEvent) => {
-        switch (state) {
-            case State.Move:
-                moveEnd(event, ws);
-                break;
-            default:
-                break;
-        }
-    });
-    canvas.addEventListener("wheel", (event: WheelEvent) => { handleScroll(event) });
-    document.getElementById("update-node-properties")?.addEventListener("click", () => {
-        let formData = new FormData(document.getElementById("node-inspector-form") as HTMLFormElement);
-
-        const data = Object.fromEntries(formData);
-
-        ws.send(JSON.stringify({
-            request: {
-                request_type: "execute_command", command: {
-                    command_type: "update_inspectables",
-                    node_id: data.node_id,
-                    node_kwargs: data,
-                }
-            }
-        }));
-    });
-
-    state_buttons.create_place.addEventListener("click", () => { toggleState(State.CreatePlace, ws) });
-    state_buttons.create_transition.addEventListener("click", () => { toggleState(State.CreateTransition, ws) });
-    state_buttons.connect.addEventListener("click", () => { toggleState(State.Connect, ws) });
-    state_buttons.delete.addEventListener("click", () => { toggleState(State.Delete, ws) });
-    state_buttons.clear.addEventListener("click", () => { clearAll(ws) });
-    state_buttons.save.addEventListener("click", () => { save(ws) });
-    state_buttons.undo.addEventListener("click", () => { undo(ws) });
-    state_buttons.redo.addEventListener("click", () => { redo(ws) });
-
-
 });
+ws.addEventListener("open", () => {
+    ws!.send(JSON.stringify({
+        request: {
+            request_type: "join_session",
+            model_id: model_id,
+        }
+    }));
+});
+ws.addEventListener("close", () => {
+    document.getElementById('openDisconnedtedModalButton')!.click();
+});
+
+
+let canvas = document.getElementById("canvas");
+if (!canvas || !(canvas instanceof SVGSVGElement)) {
+    throw new Error("canvas not found");
+}
+
+canvas.addEventListener("mousedown", (event: MouseEvent) => {
+    switch (state) {
+        case State.Move:
+            moveStart(event, ws);
+            break;
+        case State.CreatePlace:
+            createClick(event, NodeType.Place, ws);
+            break;
+        case State.CreateTransition:
+            createClick(event, NodeType.Transition, ws);
+            break;
+        case State.Connect:
+            connectClick(event, ws);
+            break;
+        case State.Delete:
+            deleteClick(event, ws);
+            break;
+    }
+});
+canvas.addEventListener("mousemove", (event: MouseEvent) => {
+    switch (state) {
+        case State.Move:
+            move(event);
+            break;
+        default:
+            break;
+    }
+});
+canvas.addEventListener("mouseup", (event: MouseEvent) => {
+    switch (state) {
+        case State.Move:
+            moveEnd(event, ws);
+            break;
+        default:
+            break;
+    }
+}
+);
+canvas.addEventListener("mouseleave", (event: MouseEvent) => {
+    switch (state) {
+        case State.Move:
+            moveEnd(event, ws);
+            break;
+        default:
+            break;
+    }
+});
+canvas.addEventListener("wheel", (event: WheelEvent) => { handleScroll(event) });
+document.getElementById("update-node-properties")?.addEventListener("click", () => {
+    let formData = new FormData(document.getElementById("node-inspector-form") as HTMLFormElement);
+
+    const data = Object.fromEntries(formData);
+
+    ws.send(JSON.stringify({
+        request: {
+            request_type: "execute_command", command: {
+                command_type: "update_inspectables",
+                node_id: data.node_id,
+                node_kwargs: data,
+            }
+        }
+    }));
+});
+
+state_buttons.create_place.addEventListener("click", () => { toggleState(State.CreatePlace, ws) });
+state_buttons.create_transition.addEventListener("click", () => { toggleState(State.CreateTransition, ws) });
+state_buttons.connect.addEventListener("click", () => { toggleState(State.Connect, ws) });
+state_buttons.delete.addEventListener("click", () => { toggleState(State.Delete, ws) });
+state_buttons.clear.addEventListener("click", () => { clearAll(ws) });
+state_buttons.save.addEventListener("click", () => { save(ws) });
+state_buttons.undo.addEventListener("click", () => { undo(ws) });
+state_buttons.redo.addEventListener("click", () => { redo(ws) });
 

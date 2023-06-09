@@ -1,7 +1,7 @@
 # SEA
 
 
-## Deploy
+## Deploy locally
 ```bash
 docker build . -t sea2023
 docker run --name sea2023 -d -p=5000:5000 sea2023:latest
@@ -14,6 +14,15 @@ docker stop sea2023
 docker rm sea2023
 ```
 
+
+## Deploy to fly.io
+```
+flyctl launch
+```
+
+```
+flyctl deploy
+```
 
 ## Develop
 ```bash

@@ -1,5 +1,5 @@
 # SEA
-
+See a preview here: https://sea-2023.fly.dev/
 
 ## Deploy locally
 ```bash
@@ -16,11 +16,13 @@ docker rm sea2023
 
 
 ## Deploy to fly.io
+Configure the app
 ```
 flyctl launch
 ```
-
+Attach storage and deploy where `<REGION>` is the same region the configured the app in.
 ```
+flyctl volumes create data --region <REGION> --size 1
 flyctl deploy
 ```
 
@@ -41,7 +43,7 @@ tsc --watch script.ts --outFile static/js/script.js --target ESNext
 ```
 
 ## Test
-We use oytest for unit testing. To run tests
+We use pytest for unit testing. To run tests
 ```bash
 pytest
 ```

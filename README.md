@@ -26,22 +26,6 @@ flyctl volumes create data --region <REGION> --size 1
 flyctl deploy
 ```
 
-## Develop
-```bash
-pip install -r requirements.txt
-brew install typescript
-mkdir models
-```
-
-Then run the following in one terminal
-```
-python main.py
-```
-in another terminal
-```
-tsc --watch script.ts --outFile static/js/script.js --target ESNext
-```
-
 ## Test
 We use pytest for unit testing. To run tests
 ```bash

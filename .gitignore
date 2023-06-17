@@ -2,6 +2,6 @@
 __pycache__/
 static/js
 .mypy_cache/
-models/
+models/*
 uml/
 .DS_Store

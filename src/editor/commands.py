@@ -33,7 +33,7 @@ class UndoableCommand(Command[CommandOutputT]):
 
 
 class SaveModelCommand(ProcessModelCommand):
-    command_type: Literal["save_model"]
+    command_type: Literal["save_model"] = "save_model"
     path: pathlib.Path
 
     def execute(self) -> None:
@@ -41,10 +41,10 @@ class SaveModelCommand(ProcessModelCommand):
 
 
 class CreateNodeCommand(ProcessModelCommand, UndoableCommand):
-    command_type: Literal["create_node"]
+    command_type: Literal["create_node"] = "create_node"
     x: float
     y: float
-    node_kwargs: dict[str, Any] = pydantic.Field(default_factory=dict)
+    node_kwargs: dict[str, Any]
     _node: process_model.NodeT = pydantic.PrivateAttr()
 
     def execute(self) -> process_model.NodeT:
@@ -60,7 +60,7 @@ class CreateNodeCommand(ProcessModelCommand, UndoableCommand):
 
 
 class DeleteNodeCommand(ProcessModelCommand, UndoableCommand):
-    command_type: Literal["delete_node"]
+    command_type: Literal["delete_node"] = "delete_node"
     node_id: process_model.NodeId
     _node: process_model.Node = pydantic.PrivateAttr()
     _edges: list[process_model.Edge] = pydantic.PrivateAttr()
@@ -77,7 +77,7 @@ class DeleteNodeCommand(ProcessModelCommand, UndoableCommand):
 
 
 class MoveNodeCommand(ProcessModelCommand, UndoableCommand):
-    command_type: Literal["move_node"]
+    command_type: Literal["move_node"] = "move_node"
     node_id: process_model.NodeId
     x: float
     y: float
@@ -95,7 +95,7 @@ class MoveNodeCommand(ProcessModelCommand, UndoableCommand):
 
 
 class CreateEdgeCommand(ProcessModelCommand, UndoableCommand):
-    command_type: Literal["create_edge"]
+    command_type: Literal["create_edge"] = "create_edge"
     start_node_id: process_model.NodeId
     end_node_id: process_model.NodeId
     edge_kwargs: dict[str, Any] = pydantic.Field(default_factory=dict)
@@ -116,7 +116,7 @@ class CreateEdgeCommand(ProcessModelCommand, UndoableCommand):
 
 
 class DeleteEdgeCommand(ProcessModelCommand, UndoableCommand):
-    command_type: Literal["delete_edge"]
+    command_type: Literal["delete_edge"] = "delete_edge"
     edge_id: process_model.EdgeId
     _edge: process_model.Edge = pydantic.PrivateAttr()
 
@@ -129,7 +129,7 @@ class DeleteEdgeCommand(ProcessModelCommand, UndoableCommand):
 
 
 class UpdateInspectablesCommand(ProcessModelCommand, UndoableCommand):
-    command_type: Literal["update_inspectables"]
+    command_type: Literal["update_inspectables"] = "update_inspectables"
     node_id: process_model.NodeId
     node_kwargs: dict[str, Any] = pydantic.Field(default_factory=dict)
     _old_kwargs: dict[str, Any] = pydantic.PrivateAttr(default_factory=dict)
@@ -152,7 +152,7 @@ class UpdateInspectablesCommand(ProcessModelCommand, UndoableCommand):
 
 
 class ClearModelCommand(ProcessModelCommand, UndoableCommand):
-    command_type: Literal["clear_model"]
+    command_type: Literal["clear_model"] = "clear_model"
     _nodes = pydantic.PrivateAttr(default_factory=list)
     _edges = pydantic.PrivateAttr(default_factory=list)
 

@@ -150,12 +150,18 @@ def test_command_history(model: process_model.ProcessModel):
     controller = process_model_controller.ProcessModelController(model)
 
     initial_model = model._serialize_to_dict()
-    controller.execute(commands.CreateNodeCommand(x=20, y=20))
-    controller.execute(commands.CreateEdgeCommand(start_node_id=NodeId(2), end_node_id=NodeId(1)))
-    controller.execute(commands.DeleteEdgeCommand(edge_id=EdgeId((NodeId(2), NodeId(1)))))
-    controller.execute(commands.UpdateInspectablesCommand(node_id=NodeId(1), node_kwargs={"name": "New Name"}))
-    controller.execute(commands.MoveNodeCommand(node_id=NodeId(1), x=200, y=300))
-    controller.execute(commands.DeleteNodeCommand(node_id=NodeId(1)))
+    controller.execute(commands.CreateNodeCommand(x=20, y=20, node_kwargs=dict(node_type=petri_net.NodeType.PLACE)))
+    controller.execute(
+        commands.CreateEdgeCommand(start_node_id=process_model.NodeId(2), end_node_id=process_model.NodeId(1))
+    )
+    controller.execute(
+        commands.DeleteEdgeCommand(edge_id=process_model.EdgeId((process_model.NodeId(2), process_model.NodeId(1))))
+    )
+    controller.execute(
+        commands.UpdateInspectablesCommand(node_id=process_model.NodeId(1), node_kwargs={"name": "New Name"})
+    )
+    controller.execute(commands.MoveNodeCommand(node_id=process_model.NodeId(1), x=200, y=300))
+    controller.execute(commands.DeleteNodeCommand(node_id=process_model.NodeId(1)))
     controller.execute(commands.ClearModelCommand())
     edited_model = model._serialize_to_dict()
 
